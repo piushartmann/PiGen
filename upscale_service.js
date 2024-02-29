@@ -3,11 +3,17 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 
-if (process.env.RENDER == 'true') {
-const keyfile = JSON.parse(fs.readFileSync('/etc/secrets/keys.json', 'utf8'));
+//const keyfile = JSON.parse(fs.readFileSync('./keys.json', 'utf8'));
+
+if (fs.existsSync('/etc/secrets/keys.json'))
+{
+    const keyfile = JSON.parse(fs.readFileSync('/etc/secrets/keys.json', 'utf8'));
+    global.keyfile = keyfile;
 }
-else {
-    const keyfile = JSON.parse(fs.readFileSync('keys.json', 'utf8'));
+else
+{
+    const keyfile = JSON.parse(fs.readFileSync('./keys.json', 'utf8'));
+    global.keyfile = keyfile;
 }
 
 
@@ -29,7 +35,7 @@ app.post('/login', (req, res) => {
     }
 });
 
-app.post('/testkeyfile', (req, res) => {
+app.get('/testkeyfile', (req, res) => {
     res.send(keyfile);
 });
 
