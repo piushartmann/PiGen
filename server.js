@@ -13,7 +13,7 @@ if (fs.existsSync('/etc/secrets/keys.json'))
 }
 else
 {
-    const keyfile = JSON.parse(fs.readFileSync('./keys.json', 'utf8'));
+    const keyfile = JSON.parse(fs.readFileSync('./testkeys.json', 'utf8'));
     global.keyfile = keyfile;
 }
 
