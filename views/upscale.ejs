@@ -1,0 +1,13 @@
+<link rel="stylesheet" href="style.css">
+
+<form action="/upscale_upload" method="POST" enctype="multipart/form-data">
+    <input type="file" name="image" accept="image/*" onchange="this.form.submit()">
+</form>
+
+<% if (file) { %>
+    <img class="uploadimg" src="uploads/<%= file %>" alt="<%= file %>">
+<% } else { %>
+    <p>No file uploaded</p>
+<% } %>
+
+<button onclick="location.href='/upscale-start'">Start</button>

@@ -1,9 +1,8 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-var crypto = require('crypto');
-const cookieParser = require('cookie-parser');
 const session = require('cookie-session')
+const multer = require('multer');
 const app = express();
 
 if (fs.existsSync('/etc/secrets/keys.json'))
@@ -22,26 +21,16 @@ console.log("Starting");
 //app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(express.json());
-app.use(cookieParser());
 app.set('view engine', 'ejs')
 app.use(express.urlencoded({
     extended: true
 }));
+app.use(express.static(__dirname + '/public'));
 app.use(session({
     secret: 'pius',
     resave: false,
     saveUninitialized: false
   }));
-
-app.get('/cookies', (req, res) => {
-    if (Object.keys(req.cookies).length > 0) {
-        res.send('You have cookies!');
-        console.log(req.cookies);
-    } else {
-        res.send('You have no cookies.');
-        console.log(req.cookies);
-    }
-});
 
 app.get('/', (req, res) => {
     if (req.session.views) {
@@ -50,11 +39,11 @@ app.get('/', (req, res) => {
       req.session.views = 1
     }
     if (req.session.user) {
-        res.redirect('/upscale');
+        res.redirect('/home');
         return;
     }
     else {
-        res.render("index.ejs", {views: req.session.views});
+        res.render("login.ejs", {views: req.session.views});
         return;
     }
   });
@@ -66,7 +55,7 @@ app.post('/login', (req, res) => {
 
     if (validate_password(user, password)) {
         req.session.user = {username: user, password: password};
-        res.redirect('/upscale');
+        res.redirect('/home');
     }
     else {
         res.redirect('/');
@@ -78,14 +67,59 @@ app.post('/logout', (req, res) => {
     res.redirect('/');
 });
 
-app.get('/upscale', (req, res) => {
+app.get('/home', (req, res) => {
     if (req.session.user) {
-        res.render("content.ejs", {username: req.session.user.username});
+        res.render("home.ejs", {username: req.session.user.username});
     }
     else {
         res.redirect('/');
     }
 
+});
+
+app.get('/upscale', (req, res) => {
+    var img = req.session.img;
+    if (req.session.user) {
+        if (img) {
+            res.render("upscale.ejs", { file: img });
+        }
+        else {
+            res.render("upscale.ejs", { file: null });
+        }
+    }
+    else {
+        res.redirect('/');
+    }
+
+});
+
+app.post('/upscale_upload', (req, res) => {
+    if (req.session.user) {
+        const storage = multer.diskStorage({
+            destination: function (req, file, cb) {
+                cb(null, 'public/uploads');
+            },
+            filename: function (req, file, cb) {
+                const randomString = Math.random().toString(36).substring(7);
+                const originalFilename = file.originalname;
+                const fileExtension = originalFilename.substring(originalFilename.lastIndexOf('.'));
+                const newFilename = randomString + fileExtension;
+                cb(null, newFilename);
+            }
+        });
+
+        const upload = multer({ storage: storage }).single('image');
+
+        upload(req, res, function (err) {
+            if (err) {
+                // Handle error
+                return;
+            }
+            // File uploaded successfully
+            req.session.img = req.file.filename;
+            res.redirect('/upscale')
+        });
+    }
 });
 
 function validate_password(username, key) {
