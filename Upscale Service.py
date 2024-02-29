@@ -4,16 +4,19 @@ import json
 
 app = Flask(__name__)
 
-keyfile = open("keys.json", "r").json()
+keyfile = json.loads(open("keys.json", "r").read())
 
 def validate_api_key(username, key):
-    if keyfile[username] == key:
-        return True
+    return keyfile[username] == key
     
 def tests():
-    return "Hello World"
+    print(keyfile)
+    return validate_api_key("test", "testkey")
+
+@app.route('/getTime', methods=['POST'])
+def upscale_image()
     
 
 if __name__ == '__main__':
-    app.run(debug=True)
     print(tests())
+    app.run(debug=True)
