@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 var crypto = require('crypto');
 const cookieParser = require('cookie-parser');
-const session = require('express-session')
+const session = require('cookie-session')
 const app = express();
 
 if (fs.existsSync('/etc/secrets/keys.json'))
