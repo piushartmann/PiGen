@@ -3,7 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const app = express();
 
-if (process.env.RENDER === 'true') {
+if (process.env.RENDER == 'true') {
 const keyfile = JSON.parse(fs.readFileSync('/etc/secrets/keys.json', 'utf8'));
 }
 else {
@@ -27,6 +27,10 @@ app.post('/login', (req, res) => {
     } else {
         res.redirect('not-allowed.html');
     }
+});
+
+app.post('/testkeyfile', (req, res) => {
+    res.send(keyfile);
 });
 
 
