@@ -49,8 +49,14 @@ app.get('/', (req, res) => {
     } else {
       req.session.views = 1
     }
-    res.render("index.ejs", {views: req.session.views});
-    return;
+    if (req.session.user) {
+        res.redirect('/upscale');
+        return;
+    }
+    else {
+        res.render("index.ejs", {views: req.session.views});
+        return;
+    }
   });
 
 
@@ -59,17 +65,28 @@ app.post('/login', (req, res) => {
     const password = req.body.password;
 
     if (validate_password(user, password)) {
-        res.cookie("id", makeID(user, password), {maxAge: 900000, httpOnly: true});
-        res.sendFile(path.join(__dirname, 'private', 'content.html'));
-    } else {
-        res.redirect('not-allowed.html');
+        req.session.user = {username: user, password: password};
+        res.redirect('/upscale');
+    }
+    else {
+        res.redirect('/');
     }
 });
 
-function makeID(user, password) {
-    var hash = crypto.createHash('sha256').update(user+password).digest('hex');
-    return hash
-}
+app.post('/logout', (req, res) => {
+    req.session.user = null;
+    res.redirect('/');
+});
+
+app.get('/upscale', (req, res) => {
+    if (req.session.user) {
+        res.render("content.ejs", {username: req.session.user.username});
+    }
+    else {
+        res.redirect('/');
+    }
+
+});
 
 function validate_password(username, key) {
     if (!keyfile[username]) {
