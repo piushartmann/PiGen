@@ -12,10 +12,13 @@
   aspect-ratio: 1 / 1;
 }
 
-.upscale {
-  background-image: url("/images/Upscale.png");
-  background-size: cover;
-  background-repeat: no-repeat;
+.sdsubmitbox {
+  display: flex;
+  justify-content: left;
+  align-items: left;
+  flex-direction: column;
+  margin-top: 20px;
+  margin-right: 80%;
 }
 
 .comingsoon {
