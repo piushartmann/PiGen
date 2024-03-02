@@ -7,6 +7,7 @@ const { url } = require('inspector');
 const { Console } = require('console');
 const sharp = require('sharp');
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+const Jimp = require('jimp');
 const app = express();
 
 var storage = multer.diskStorage({
@@ -152,8 +153,10 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
         if(type == "image"){
             user = req.headers['user'];
             try {
-                // Use Sharp with the file path instead of the buffer
-                await sharp(req.file.path).png()
+                // Use a different image processing library instead of Sharp
+                // For example, you can try using Jimp
+                const image = await Jimp.read(req.file.path);
+                await image.writeAsync(req.file.path);
                 res.status(201).send('Image uploaded and processed successfully')
                 console.log("Image processed");
                 console.log(nextdel)
