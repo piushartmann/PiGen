@@ -143,6 +143,8 @@ app.get('/compute-endpoint', (req, res) => {
 
     });
 
+var nextdel = null;
+
 app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
     const token = req.headers['authorization'];
     const type = req.headers['type'];
@@ -154,8 +156,24 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
                 await sharp(req.file.path).png()
                 res.status(201).send('Image uploaded and processed successfully')
                 console.log("Image processed");
-                console.log(req.file.path)
+                console.log(nextdel)
                 sendImageUpdateToClient(user, req.file.originalname);
+                if(nextdel != null){
+                    console.log("Deleting " + nextdel);
+                    fs.unlink(nextdel, (err) => {
+                        if (err) {
+                            console.error(err);
+                            return;
+                        }
+                    });
+                }
+                console.log(req.headers['temp']);
+                if(req.headers['temp'] === "true"){
+                    nextdel = req.file.path;
+                }
+                else{
+                    nextdel = null;
+                }
             } catch (error) {
                 console.log(error)
                 res.status(400).send(error.message)

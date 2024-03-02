@@ -21,7 +21,7 @@ def process_data(data):
 
     try:
         file = generate_image(data['prompt'], data['negprompt'])
-        respond(data['user'], file)
+        sendFile(data['user'], file)
     finally:
         stop_thread = True  # Signal the thread to stop
         progress_thread.join()  # Wait for the thread to finish
@@ -46,12 +46,12 @@ def update_progress(username):
         if img_data != None:
             img_data = r.json()["current_image"]
             file = base64.decodebytes(str.encode(img_data))
-            respond(username, file)
+            sendFile(username, file, temp=True)
             time.sleep(2)
     
 
-def respond(username, file): 
-    headers = {"authorization":"testtoken", "type":"image", "user":username}
+def sendFile(username, file, temp=False): 
+    headers = {"authorization":"testtoken", "type":"image", "user":username, "temp":str(temp).lower()}
     filename = username + "-" + str(time.time()) + ".png"
     files = {
         'file': (filename, file, 'image/jpeg'),  # Ensure the field name matches your server's expectation
