@@ -3,10 +3,6 @@ const path = require('path');
 const fs = require('fs');
 const session = require('cookie-session')
 const multer = require('multer');
-const { url } = require('inspector');
-const { Console } = require('console');
-const sharp = require('sharp');
-const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const Jimp = require('jimp');
 const app = express();
 
