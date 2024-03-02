@@ -17,7 +17,7 @@
     eventSource.onmessage = function(event) {
         const data = JSON.parse(event.data);
         const imgElement = document.createElement('img');
-        imgElement.src = 'src="data:image/png;base64,'+data.image;
+        imgElement.src = `uploads/${data.imagepath}`;
         imgElement.alt = 'Generated Image';
         imgElement.classList.add('image');
 

@@ -15,8 +15,6 @@ def process_data(data):
     global stop_thread
     stop_thread = False  # Flag to control the background thread
 
-    file = base64.decodebytes(str.encode(img_data))
-
     # Start the progress updater as a background thread
     progress_thread = threading.Thread(target=update_progress, args=(data['user'],))
     progress_thread.start()
@@ -49,7 +47,7 @@ def update_progress(username):
             img_data = r.json()["current_image"]
             file = base64.decodebytes(str.encode(img_data))
             respond(username, file)
-        time.sleep(1)
+            time.sleep(2)
     
 
 def respond(username, file): 

@@ -143,7 +143,7 @@ app.get('/compute-endpoint', (req, res) => {
 
     });
 
-app.post('/compute-endpoint', async (req, res) => {
+app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
     const token = req.headers['authorization'];
     const type = req.headers['type'];
     if(token == "testtoken"){
@@ -155,7 +155,7 @@ app.post('/compute-endpoint', async (req, res) => {
                 res.status(201).send('Image uploaded and processed successfully')
                 console.log("Image processed");
                 console.log(req.file.path)
-                sendImageUpdateToClient(user, img);
+                sendImageUpdateToClient(user, req.file.originalname);
             } catch (error) {
                 console.log(error)
                 res.status(400).send(error.message)
@@ -193,10 +193,10 @@ app.get('/sd-events', function(req, res) {
     });
 });
 
-function sendImageUpdateToClient(username, image) {
+function sendImageUpdateToClient(username, imagepath) {
     const client = clients.get(username);
     if (client) {
-        client.res.write(`data: ${JSON.stringify({ image })}\n\n`);
+        client.res.write(`data: ${JSON.stringify({ imagepath })}\n\n`);
     }
 }
 
