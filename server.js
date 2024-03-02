@@ -5,8 +5,19 @@ const session = require('cookie-session')
 const multer = require('multer');
 const { url } = require('inspector');
 const { Console } = require('console');
+const sharp = require('sharp');
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const app = express();
+
+var storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, 'public/uploads/')
+    },
+    filename: function (req, file, cb) {
+      cb(null, file.originalname)
+    }
+})
+var upload = multer({ storage: storage })
 
 if (fs.existsSync('/etc/secrets/keys.json'))
 {
@@ -25,14 +36,12 @@ console.log("Starting");
 
 var sdrequeststack = [];
 
-//app.use(express.static(path.join(__dirname, 'public')));
-
 app.use(express.json());
 app.set('view engine', 'ejs')
 app.use(express.urlencoded({
     extended: true
 }));
-app.use(express.static(__dirname + '/public'));
+app.use(express.static('public'));
 app.use(session({
     secret: 'pius',
     resave: false,
@@ -126,17 +135,6 @@ app.get('/compute-endpoint', (req, res) => {
                 console.log(prompt);
                 res.send(prompt);
             }
-        }else if(type == "image"){
-            user = req.headers['user'];
-            var image = request.body
-            //a function which gemerates a unique name for the image with the user name at the front like user-sjhdgafkjsg with at least 10 characters
-            var imagepath = "images/" + user + "-" + Math.random().toString(36).substring(7) + ".jpg";
-
-            fs.writeFile(imagepath, image, function(err){
-                if (err) throw err
-                    console.log('File saved.');
-                      });
-            res.send(null);
         }
     }
     else{
@@ -144,6 +142,33 @@ app.get('/compute-endpoint', (req, res) => {
     }
 
     });
+
+app.post('/compute-endpoint', async (req, res) => {
+    const token = req.headers['authorization'];
+    const type = req.headers['type'];
+    if(token == "testtoken"){
+        if(type == "image"){
+            user = req.headers['user'];
+            try {
+                // Use Sharp with the file path instead of the buffer
+                await sharp(req.file.path).png()
+                res.status(201).send('Image uploaded and processed successfully')
+                console.log("Image processed");
+                console.log(req.file.path)
+                sendImageUpdateToClient(user, img);
+            } catch (error) {
+                console.log(error)
+                res.status(400).send(error.message)
+            }
+        } else {
+            res.status(400).send('Unsupported type');
+        }
+    }
+    else{
+        res.status(401).send("Unauthorized");
+    }
+});
+    
 
 const clients = new Map();
 
@@ -168,10 +193,10 @@ app.get('/sd-events', function(req, res) {
     });
 });
 
-function sendImageUpdateToClient(username, imagepath) {
+function sendImageUpdateToClient(username, image) {
     const client = clients.get(username);
     if (client) {
-        client.res.write(`data: ${JSON.stringify({ imagepath })}\n\n`);
+        client.res.write(`data: ${JSON.stringify({ image })}\n\n`);
     }
 }
 

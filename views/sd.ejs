@@ -1,4 +1,5 @@
 <link rel="stylesheet" href="style.css">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 
 <form class="sdsubmitbox" action="/sd-submit" method="POST">
     <input type="text" id="prompt" name="prompt" value= "<%= prompt %>" placeholder="Prompt"><br><br>
@@ -6,14 +7,30 @@
     <button type="submit">Submit</button>
 </form>
 
+<div id="image-container">
+</div>
+
 <script>
+    document.addEventListener('DOMContentLoaded', (event) => {
     const eventSource = new EventSource('/sd-events');
 
     eventSource.onmessage = function(event) {
         const data = JSON.parse(event.data);
         const imgElement = document.createElement('img');
-        imgElement.src = `/public/images/${data.imageId}`;
+        imgElement.src = 'src="data:image/png;base64,'+data.image;
         imgElement.alt = 'Generated Image';
-        document.getElementById('image-container').appendChild(imgElement);
+        imgElement.classList.add('image');
+
+        imgElement.onload = function() {
+            const imageContainer = document.getElementById('image-container');
+            // Remove all existing children
+            while (imageContainer.firstChild) {
+                imageContainer.removeChild(imageContainer.firstChild);
+            }
+            // Append the new image
+            imageContainer.appendChild(imgElement);
+        };
     };
+});
 </script>
+

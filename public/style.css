@@ -18,7 +18,6 @@
   align-items: left;
   flex-direction: column;
   margin-top: 20px;
-  margin-right: 80%;
 }
 
 .comingsoon {
@@ -41,4 +40,14 @@ button {
   width: 40%;
   height: 100vh;
   object-fit: contain;
+}
+
+.image {
+  height: 50%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: gray;
 }
