@@ -20,9 +20,9 @@ form {
   margin-top: 20px;
 }
 
-button {
+.logout-button {
   padding: 10px 20px;
-  background-color: #4CAF50;
+  background-color: #f44336;
   color: white;
   border: none;
   cursor: pointer;
@@ -69,4 +69,12 @@ button {
   align-items: center;
   justify-content: center;
   background-color: gray;
+}
+
+.back-button {
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
 }

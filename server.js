@@ -45,7 +45,7 @@ app.get('/', (req, res) => {
     } else {
       req.session.views = 1
     }
-    if (req.session.user) {
+    if (checkUser(req.session.user)) {
         res.redirect('/home');
         return;
     }
@@ -75,7 +75,7 @@ app.post('/logout', (req, res) => {
 });
 
 app.get('/home', (req, res) => {
-    if (req.session.user) {
+    if (checkUser(req.session.user)) {
         res.render("home.ejs", {username: req.session.user.username});
     }
     else {
@@ -85,7 +85,7 @@ app.get('/home', (req, res) => {
 });
 
 app.get('/sd', (req, res) => {
-    if (req.session.user) {
+    if (checkUser(req.session.user)) {
         lastrequest = getUserdata(req.session.user.username, "lastrequest")
         if (lastrequest != null) {
             proprompt = lastrequest.prompt;
@@ -98,6 +98,11 @@ app.get('/sd', (req, res) => {
         }
 
         lastimg = getUserdata(req.session.user.username, "lastimg")
+        if (lastimg == null) {
+            lastimg = "images/stable_diffusion_logo.png";
+        }else{
+            lastimg = "uploads/" + lastimg;
+        }
 
         res.render("sd.ejs", {username: req.session.user.username, prompt: proprompt, negprompt: negprompt, lastimg: lastimg});
     }
@@ -108,7 +113,7 @@ app.get('/sd', (req, res) => {
 });
 
 app.post('/sd-submit', (req, res) => {
-    if (req.session.user) {
+    if (checkUser(req.session.user)) {
         const prompt = req.body.prompt;
         const negprompt = req.body.negprompt;
         const user = req.session.user.username;
@@ -149,24 +154,19 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
         if(type == "image"){
             user = req.headers['user'];
             try {
-                // Use a different image processing library instead of Sharp
-                // For example, you can try using Jimp
                 const image = await Jimp.read(req.file.path);
                 await image.writeAsync(req.file.path);
                 res.status(201).send('Image uploaded and processed successfully')
                 console.log("Image processed");
-                //console.log(nextdel)
                 sendImageUpdateToClient(user, req.file.originalname);
                 if(nextdel != null){
-                    //console.log("Deleting " + nextdel);
                     fs.unlink(nextdel, (err) => {
                         if (err) {
                             console.error(err);
                             return;
                         }
                     });
-                }
-                //console.log(req.headers['temp']);
+                };
                 if(req.headers['temp'] === "true"){
                     nextdel = req.file.path;
                 }
@@ -210,27 +210,14 @@ app.get('/sd-events', function(req, res) {
     });
 });
 
-app.post('/sync-keys', (req, res) => {
-    const token = req.headers['authorization'];
-    if(token == compute_token) {
-        global.keyfile = req.body;
-        global.keysynced = true;
-        console.log("Keys synced");
-        res.status(200).send("Keys synced");
-    }
-    else{
-        res.status(401).send("Unauthorized");
-    }
-
-});
 
 app.post('/setModel', (req, res) => {
-    if (req.session.user) {
+    if (checkUser(req.session.user)) {
         const model = req.body.option;
         requeststack.push({"function":"setModel", "arguments": {model: model}});
         res.status(200).send("Model set");
     }
-
+    
 });
 
 app.post('/userDataUpdate', (req, res) => {
@@ -243,6 +230,20 @@ app.post('/userDataUpdate', (req, res) => {
         res.status(401).send("Unauthorized");
     }
     
+});
+
+app.post('/sync-keys', (req, res) => {
+    const token = req.headers['authorization'];
+    if(token == compute_token) {
+        global.keyfile = req.body;
+        global.keysynced = true;
+        console.log("Keys synced");
+        res.status(200).send("Keys synced");
+    }
+    else{
+        res.status(401).send("Unauthorized");
+    }
+
 });
 
 function addUserdata(user, key, data) {
@@ -268,6 +269,13 @@ function sendImageUpdateToClient(username, imagepath) {
         client.lastimg = imagepath;
         addUserdata(username, "lastimg", imagepath);
     }
+}
+
+function checkUser(user){
+    if(!user){
+        return false;
+    }
+    return validate_password(user.username, user.password);
 }
 
 function validate_password(username, key) {

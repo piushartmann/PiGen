@@ -8,7 +8,7 @@
 </form>
 
 <div class= "img-container" id="image-container">
-    <img src="uploads/<%= lastimg %>" alt="Generated Image" class="image">
+    <img src="<%= lastimg %>" alt="Generated Image" class="image">
 </div>
 
 <label for="model-names">Choose Model:</label> 
@@ -17,6 +17,8 @@
     <option value="sd_xl_base_1.0">sd_xl_base</option> 
     <option value="revAnimated_v122EOL">revAnimated</option> 
 </select>
+
+<button class="back-button" onclick="window.location.href = '/';">Back</button>
 
 <script>
     function sendOption() {
@@ -31,12 +33,6 @@
             }
         })
         .then(response => response.json())
-        .then(data => {
-            // Handle the response from the server
-        })
-        .catch(error => {
-            // Handle any errors
-        });
     }
 </script>
 
