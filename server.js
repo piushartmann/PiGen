@@ -16,22 +16,13 @@ var storage = multer.diskStorage({
 })
 var upload = multer({ storage: storage })
 
-if (fs.existsSync('/etc/secrets/keys.json'))
-{
-    const keyfile = JSON.parse(fs.readFileSync('/etc/secrets/keys.json', 'utf8'));
-    global.keyfile = keyfile;
-    global.baseurl = "https://superladens.onrender.com/"
-}
-else
-{
-    const keyfile = JSON.parse(fs.readFileSync('./testkeys.json', 'utf8'));
-    global.keyfile = keyfile;
-    global.baseurl = "https://superladens.onrender.com/"
-}
+keyfile = null;
+keysynced = false;
 
 console.log("Starting");
 
 var sdrequeststack = [];
+const compute_token = "testtoken";
 
 app.use(express.json());
 app.set('view engine', 'ejs')
@@ -101,6 +92,10 @@ app.get('/sd', (req, res) => {
             var negprompt = req.session.lastrequest.negprompt;
         }
         res.render("sd.ejs", {username: req.session.user.username, prompt: prompt, negprompt: negprompt});
+        var client = clients.get(req.session.user.username)
+        if(client.lastimg != null){
+            sendImageUpdateToClient(req.session.user.username, client.lastimg);
+        }
     }
     else {
         res.redirect('/');
@@ -132,6 +127,8 @@ app.get('/compute-endpoint', (req, res) => {
                 console.log(prompt);
                 res.send(prompt);
             }
+        } else {
+            res.status(400).send('Unsupported type');
         }
     }
     else{
@@ -145,7 +142,7 @@ var nextdel = null;
 app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
     const token = req.headers['authorization'];
     const type = req.headers['type'];
-    if(token == "testtoken"){
+    if(token == compute_token){
         if(type == "image"){
             user = req.headers['user'];
             try {
@@ -155,10 +152,10 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
                 await image.writeAsync(req.file.path);
                 res.status(201).send('Image uploaded and processed successfully')
                 console.log("Image processed");
-                console.log(nextdel)
+                //console.log(nextdel)
                 sendImageUpdateToClient(user, req.file.originalname);
                 if(nextdel != null){
-                    console.log("Deleting " + nextdel);
+                    //console.log("Deleting " + nextdel);
                     fs.unlink(nextdel, (err) => {
                         if (err) {
                             console.error(err);
@@ -166,7 +163,7 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
                         }
                     });
                 }
-                console.log(req.headers['temp']);
+                //console.log(req.headers['temp']);
                 if(req.headers['temp'] === "true"){
                     nextdel = req.file.path;
                 }
@@ -200,7 +197,8 @@ app.get('/sd-events', function(req, res) {
     const username = req.session.user.username;
     const newClient = {
         id: username,
-        res
+        res,
+        lastimg: null
     };
 
     clients.set(username, newClient);
@@ -210,19 +208,37 @@ app.get('/sd-events', function(req, res) {
     });
 });
 
+app.post('/sync-keys', (req, res) => {
+    const token = req.headers['authorization'];
+    if(token == compute_token) {
+        keyfile = req.body;
+        keysynced = true;
+        console.log("Keys synced");
+    }
+    else{
+        res.status(401).send("Unauthorized");
+    }
+
+});
+
 function sendImageUpdateToClient(username, imagepath) {
     const client = clients.get(username);
     if (client) {
         client.res.write(`data: ${JSON.stringify({ imagepath })}\n\n`);
+        client.lastimg = imagepath;
     }
 }
 
 function validate_password(username, key) {
-    if (!keyfile[username]) {
+    if (keyfile == True) {
+        if (!keyfile[username]) {
+            return false;
+        }
+        else {
+            return keyfile[username] == key;
+        }
+    } else {
         return false;
-    }
-    else {
-        return keyfile[username] == key;
     }
 }
 

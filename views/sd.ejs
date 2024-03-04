@@ -4,10 +4,10 @@
 <form class="sdsubmitbox" action="/sd-submit" method="POST">
     <input type="text" id="prompt" name="prompt" value= "<%= prompt %>" placeholder="Prompt"><br><br>
     <input type="text" id="negprompt" name="negprompt" value= "<%= negprompt %>" placeholder="Negative Prompt"><br><br>
-    <button type="submit">Submit</button>
+    <button class="sd-button" type="submit">Submit</button>
 </form>
 
-<div id="image-container">
+<div class= "img-container" id="image-container">
 </div>
 
 <script>

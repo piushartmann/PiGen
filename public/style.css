@@ -12,14 +12,6 @@
   aspect-ratio: 1 / 1;
 }
 
-.sdsubmitbox {
-  display: flex;
-  justify-content: left;
-  align-items: left;
-  flex-direction: column;
-  margin-top: 20px;
-}
-
 .comingsoon {
   background-color: rgb(184, 184, 184);
 }
@@ -36,13 +28,40 @@ button {
   cursor: pointer;
 }
 
-.uploadimg {
-  width: 40%;
-  height: 100vh;
-  object-fit: contain;
+.image {
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: gray;
 }
 
-.image {
+.sd-logo {
+  background-image: url("images/stable_diffusion_logo.png");
+  background-size: cover;
+  background-position: center;
+}
+
+.sd-button {
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+
+.sdsubmitbox {
+  display: flex;
+  justify-content: left;
+  align-items: left;
+  flex-direction: column;
+  margin-top: 20px;
+}
+
+.img-container {
   height: 50%;
   aspect-ratio: 1 / 1;
   object-fit: contain;
