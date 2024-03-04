@@ -21,7 +21,7 @@ keysynced = false;
 
 console.log("Starting");
 
-var sdrequeststack = [];
+var requeststack = [];
 const compute_token = "testtoken";
 
 app.use(express.json());
@@ -93,8 +93,11 @@ app.get('/sd', (req, res) => {
         }
         res.render("sd.ejs", {username: req.session.user.username, prompt: prompt, negprompt: negprompt});
         var client = clients.get(req.session.user.username)
-        if(client.lastimg != null){
-            sendImageUpdateToClient(req.session.user.username, client.lastimg);
+        
+        if (client) {
+            if(client.lastimg != null){
+                sendImageUpdateToClient(req.session.user.username, client.lastimg);
+            }
         }
     }
     else {
@@ -108,7 +111,7 @@ app.post('/sd-submit', (req, res) => {
         const prompt = req.body.prompt;
         const negprompt = req.body.negprompt;
         const user = req.session.user.username;
-        sdrequeststack.push({prompt: prompt, negprompt: negprompt, user: user});
+        requeststack.push({"function":"generate_img", "arguments": {prompt: prompt, negprompt: negprompt, user: user}});
         req.session.lastrequest = {prompt: prompt, negprompt: negprompt};
         res.redirect('/sd');
     }
@@ -119,12 +122,11 @@ app.get('/compute-endpoint', (req, res) => {
     type = req.headers['type'];
     if(token == "testtoken"){
         if(type == "request"){
-            if(sdrequeststack.length == 0){
+            if(requeststack.length == 0){
                 res.send(null);
             }
             else{
-                prompt = sdrequeststack.pop();
-                console.log(prompt);
+                prompt = requeststack.pop();
                 res.send(prompt);
             }
         } else {
@@ -211,9 +213,10 @@ app.get('/sd-events', function(req, res) {
 app.post('/sync-keys', (req, res) => {
     const token = req.headers['authorization'];
     if(token == compute_token) {
-        keyfile = req.body;
-        keysynced = true;
+        global.keyfile = req.body;
+        global.keysynced = true;
         console.log("Keys synced");
+        res.status(200).send("Keys synced");
     }
     else{
         res.status(401).send("Unauthorized");
@@ -230,8 +233,8 @@ function sendImageUpdateToClient(username, imagepath) {
 }
 
 function validate_password(username, key) {
-    if (keyfile == True) {
-        if (!keyfile[username]) {
+    if (global.keysynced == true) {
+        if (!global.keyfile[username]) {
             return false;
         }
         else {
@@ -242,6 +245,7 @@ function validate_password(username, key) {
     }
 }
 
+requeststack.push({"function":"getKeys", "arguments": "{}"});
 app.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
