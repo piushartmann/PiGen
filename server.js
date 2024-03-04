@@ -4,6 +4,7 @@ const fs = require('fs');
 const session = require('cookie-session')
 const multer = require('multer');
 const Jimp = require('jimp');
+const e = require('express');
 const app = express();
 
 var storage = multer.diskStorage({
@@ -16,14 +17,6 @@ var storage = multer.diskStorage({
 })
 var upload = multer({ storage: storage })
 
-keyfile = null;
-keysynced = false;
-
-console.log("Starting");
-
-var requeststack = [];
-const compute_token = "testtoken";
-
 app.use(express.json());
 app.set('view engine', 'ejs')
 app.use(express.urlencoded({
@@ -35,6 +28,16 @@ app.use(session({
     resave: false,
     saveUninitialized: false
   }));
+
+
+keyfile = null;
+keysynced = false;
+userdata = {};
+
+console.log("Starting");
+
+var requeststack = [];
+const compute_token = "testtoken";
 
 app.get('/', (req, res) => {
     if (req.session.views) {
@@ -83,22 +86,20 @@ app.get('/home', (req, res) => {
 
 app.get('/sd', (req, res) => {
     if (req.session.user) {
-        if(req.session.lastrequest == null){
-            var prompt = "";
-            var negprompt = "";
+        lastrequest = getUserdata(req.session.user.username, "lastrequest")
+        if (lastrequest != null) {
+            proprompt = lastrequest.prompt;
+            negprompt = lastrequest.negprompt;
         }
-        else{
-            var prompt = req.session.lastrequest.prompt;
-            var negprompt = req.session.lastrequest.negprompt;
+        else {
+            proprompt = null;
+            negprompt = null;
+
         }
-        res.render("sd.ejs", {username: req.session.user.username, prompt: prompt, negprompt: negprompt});
-        var client = clients.get(req.session.user.username)
-        
-        if (client) {
-            if(client.lastimg != null){
-                sendImageUpdateToClient(req.session.user.username, client.lastimg);
-            }
-        }
+
+        lastimg = getUserdata(req.session.user.username, "lastimg")
+
+        res.render("sd.ejs", {username: req.session.user.username, prompt: proprompt, negprompt: negprompt, lastimg: lastimg});
     }
     else {
         res.redirect('/');
@@ -112,7 +113,7 @@ app.post('/sd-submit', (req, res) => {
         const negprompt = req.body.negprompt;
         const user = req.session.user.username;
         requeststack.push({"function":"generate_img", "arguments": {prompt: prompt, negprompt: negprompt, user: user}});
-        req.session.lastrequest = {prompt: prompt, negprompt: negprompt};
+        addUserdata(user, "lastrequest", {prompt: prompt, negprompt: negprompt});
         res.redirect('/sd');
     }
 });
@@ -199,8 +200,7 @@ app.get('/sd-events', function(req, res) {
     const username = req.session.user.username;
     const newClient = {
         id: username,
-        res,
-        lastimg: null
+        res
     };
 
     clients.set(username, newClient);
@@ -224,11 +224,49 @@ app.post('/sync-keys', (req, res) => {
 
 });
 
+app.post('/setModel', (req, res) => {
+    if (req.session.user) {
+        const model = req.body.option;
+        requeststack.push({"function":"setModel", "arguments": {model: model}});
+        res.status(200).send("Model set");
+    }
+
+});
+
+app.post('/userDataUpdate', (req, res) => {
+    const token = req.headers['authorization'];
+    if(token == compute_token) {
+        global.userdata = req.body;
+        console.log("Userdata updated");
+        res.status(200).send("Userdata updated");
+    }else{
+        res.status(401).send("Unauthorized");
+    }
+    
+});
+
+function addUserdata(user, key, data) {
+    if (!global.userdata[user]) {
+        global.userdata[user] = {};
+    }
+    global.userdata[user][key] = data;
+    requeststack.push({"function":"setUserdata", "arguments": {user: user, key: key, value: data}});
+}
+
+function getUserdata(user, key) {
+    if (global.userdata[user] && global.userdata[user][key]){
+        return global.userdata[user][key];
+    }else{
+        return null;
+    }
+}
+
 function sendImageUpdateToClient(username, imagepath) {
     const client = clients.get(username);
     if (client) {
         client.res.write(`data: ${JSON.stringify({ imagepath })}\n\n`);
         client.lastimg = imagepath;
+        addUserdata(username, "lastimg", imagepath);
     }
 }
 
@@ -246,6 +284,7 @@ function validate_password(username, key) {
 }
 
 requeststack.push({"function":"getKeys", "arguments": "{}"});
+requeststack.push({"function":"updateUserData", "arguments": "{}"});
 app.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
