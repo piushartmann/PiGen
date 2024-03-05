@@ -1,62 +1,94 @@
+<!DOCTYPE ejs>
 <link rel="stylesheet" href="style.css">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 
 <form class="sdsubmitbox" action="/sd-submit" method="POST">
-    <input type="text" id="prompt" name="prompt" value= "<%= prompt %>" placeholder="Prompt"><br><br>
-    <input type="text" id="negprompt" name="negprompt" value= "<%= negprompt %>" placeholder="Negative Prompt"><br><br>
+    <input type="text" id="prompt" name="prompt" value="<%= prompt %>" placeholder="Prompt"
+        onchange="sendPromptValues()"><br><br>
+    <input type="text" id="negprompt" name="negprompt" value="<%= negprompt %>" placeholder="Negative Prompt"
+        onchange="sendPromptValues()"><br><br>
+    
+    <label for="model-names">Choose Model:</label>
+    <select class="sd-model-selector" name="model-names" id="model-names" onchange="sendOption()">
+        <option value="juggernautXL_version6Rundiffusion">juggernautXL</option>
+        <option value="sd_xl_base_1.0">sd_xl_base</option>
+        <option value="revAnimated_v122EOL">revAnimated</option>
+    </select>
     <button class="sd-button" type="submit">Submit</button>
 </form>
 
-<div class= "img-container" id="image-container">
+<div class="img-container" id="image-container">
     <img src="<%= lastimg %>" alt="Generated Image" class="image">
 </div>
 
-<label for="model-names">Choose Model:</label> 
-<select name="model-names" id="model-names" onchange="sendOption()">
-    <option value="juggernautXL_version6Rundiffusion">juggernautXL</option> 
-    <option value="sd_xl_base_1.0">sd_xl_base</option> 
-    <option value="revAnimated_v122EOL">revAnimated</option> 
-</select>
-
-<button class="back-button" onclick="window.location.href = '/';">Back</button>
+<input class="sd-instant" type="checkbox" id="instant" name="instant" onchange="toggleModelNames()" <%= instant ? 'checked' : '' %>>
+<label for="tickbox">Instant-mode</label>
 
 <script>
-    function sendOption() {
-        const selectElement = document.getElementById('model-names');
-        const selectedOption = selectElement.value;
+    toggleModelNames();
+    function toggleModelNames() {
+        const modelNamesDropdown = document.getElementById('model-names');
+        const instantCheckbox = document.getElementById('instant');
+        const submitButton = document.querySelector('.sd-button');
 
-        fetch('/setModel', {
+        if (instantCheckbox.checked) {
+            modelNamesDropdown.style.display = 'none';
+            submitButton.style.display = 'none';
+            sendInstantState(true);
+            sendPromptValues();
+        } else {
+            modelNamesDropdown.style.display = 'block';
+            submitButton.style.display = 'block';
+            sendInstantState(false);
+        }
+    }
+
+    function sendInstantState(state) {
+        fetch('/setInstant', {
             method: 'POST',
-            body: JSON.stringify({ option: selectedOption }),
+            body: JSON.stringify({ state: state }),
             headers: {
                 'Content-Type': 'application/json'
             }
         })
-        .then(response => response.json())
+    }
+
+    function sendPromptValues() {
+        const promptValue = document.getElementById('prompt').value;
+        const negpromptValue = document.getElementById('negprompt').value;
+
+        fetch('/instant-prompt', {
+            method: 'POST',
+            body: JSON.stringify({ prompt: promptValue, negprompt: negpromptValue }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
     }
 </script>
 
+<button class="back-button" onclick="window.location.href = '/';">Back</button>
+
 <script>
     document.addEventListener('DOMContentLoaded', (event) => {
-    const eventSource = new EventSource('/sd-events');
+        const eventSource = new EventSource('/sd-events');
 
-    eventSource.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        const imgElement = document.createElement('img');
-        imgElement.src = `uploads/${data.imagepath}`;
-        imgElement.alt = 'Generated Image';
-        imgElement.classList.add('image');
+        eventSource.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            const imgElement = document.createElement('img');
+            imgElement.src = `uploads/${data.imagepath}`;
+            imgElement.alt = 'Generated Image';
+            imgElement.classList.add('image');
 
-        imgElement.onload = function() {
-            const imageContainer = document.getElementById('image-container');
-            // Remove all existing children
-            while (imageContainer.firstChild) {
-                imageContainer.removeChild(imageContainer.firstChild);
-            }
-            // Append the new image
-            imageContainer.appendChild(imgElement);
+            imgElement.onload = function () {
+                const imageContainer = document.getElementById('image-container');
+                // Remove all existing children
+                while (imageContainer.firstChild) {
+                    imageContainer.removeChild(imageContainer.firstChild);
+                }
+                // Append the new image
+                imageContainer.appendChild(imgElement);
+            };
         };
-    };
-});
+    });
 </script>
-

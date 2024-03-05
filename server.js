@@ -104,7 +104,7 @@ app.get('/sd', (req, res) => {
             lastimg = "uploads/" + lastimg;
         }
 
-        res.render("sd.ejs", {username: req.session.user.username, prompt: proprompt, negprompt: negprompt, lastimg: lastimg});
+        res.render("sd.ejs", {username: req.session.user.username, prompt: proprompt, negprompt: negprompt, lastimg: lastimg, instant: getUserdata(req.session.user.username, "instant")});
     }
     else {
         res.redirect('/');
@@ -117,7 +117,10 @@ app.post('/sd-submit', (req, res) => {
         const prompt = req.body.prompt;
         const negprompt = req.body.negprompt;
         const user = req.session.user.username;
-        requeststack.push({"function":"generate_img", "arguments": {prompt: prompt, negprompt: negprompt, user: user}});
+        const model = req.body['model-names'];
+        console.log(req.body);
+        console.log(prompt, negprompt, user, model);
+        requeststack.push({"function":"generate_img", "arguments": {prompt: prompt, negprompt: negprompt, model: model, user: user}});
         addUserdata(user, "lastrequest", {prompt: prompt, negprompt: negprompt});
         res.redirect('/sd');
     }
@@ -208,6 +211,28 @@ app.get('/sd-events', function(req, res) {
     req.on('close', () => {
         clients.delete(username);
     });
+});
+
+app.post('/setInstant', (req, res) => {
+    if (checkUser(req.session.user)) {
+        const instant = req.body.state;
+        addUserdata(req.session.user.username, "instant", instant);
+        res.status(200).send("Instant set");
+    }
+
+});
+
+app.post('/instant-prompt', (req, res) => {
+    if (checkUser(req.session.user)) {
+        const prompt = req.body.prompt;
+        const negprompt = req.body.negprompt;
+        const user = req.session.user.username;
+        console.log(prompt, negprompt, user);
+        addUserdata(user, "lastrequest", {prompt: prompt, negprompt: negprompt});
+        requeststack.push({"function":"generate_img", "arguments": {prompt: prompt, negprompt: negprompt, model: "sd_xl_turbo_1.0_fp16", user: user}});
+        res.status(200).send("Prompt set");
+    }
+
 });
 
 
