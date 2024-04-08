@@ -84,6 +84,131 @@ app.get('/home', (req, res) => {
 
 });
 
+app.get('/chat', (req, res) => {
+    if (checkUser(req.session.user)) {
+        res.render("chat.ejs", {username: req.session.user.username});
+    }
+    else {
+        res.redirect('/');
+    }
+
+});
+
+
+Chathistory = {};
+app.post('/chat-msg', (req, res) => {
+    if (checkUser(req.session.user)) {
+        msg = {
+            "role":"user",
+            "content":req.body.msg
+        }
+
+        ChatHistory = getUserdata(req.session.user.username, "history");
+        if (ChatHistory == null) {
+            ChatHistory = [];
+        }
+        ChatHistory.push(msg);
+
+        addUserdata(req.session.user.username, "history", ChatHistory);
+
+        console.log(ChatHistory);
+        
+        requeststack.push({"function":"chatMsg", "arguments": {msg: ChatHistory, username: req.session.user.username}});
+        
+        console.log("Chat msg requested");
+        res.status(200);
+    }
+
+});
+
+const Chatclients = new Map();
+
+app.get('/chat-events', function(req, res) {
+    const headers = {
+        'Content-Type': 'text/event-stream',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache'
+    };
+    res.writeHead(200, headers);
+
+    const username = req.session.user.username;
+    const newClient = {
+        id: username,
+        res
+    };
+
+    Chatclients.set(username, newClient);
+
+    req.on('close', () => {
+        Chatclients.delete(username);
+    });
+});
+
+function sendChatUpdateToClient(username, msg, end) {
+    const client = Chatclients.get(username);
+    if (client) {
+
+        client.res.write(`data: ${JSON.stringify({ msg, end })}\n\n`);
+    }
+}
+
+app.post('/add-to-history', (req, res) => {
+    token = req.headers['authorization'];
+    if(token == compute_token){
+        username = req.body.user;
+        fullmsg = req.body.msg;
+
+        Jsonmsg = {
+            "role": "assistant",
+            "content": fullmsg
+        }
+
+        ChatHistory = getUserdata(username, "history");
+        if (ChatHistory == null) {
+            ChatHistory = [];
+        }
+        ChatHistory.push(Jsonmsg);
+
+        addUserdata(username, "history", ChatHistory);
+
+        res.status(200).send("History updated");
+    }
+    else{
+        res.send("Unauthorized");
+    }
+
+});
+
+app.post('/delete-history', (req, res) => {
+    if(checkUser(req.session.user)){
+
+        addUserdata(req.session.user.username, "history", []);
+        console.log("History deleted");
+
+        res.status(200).send("History deleted");
+    }
+    else{
+        res.send("Unauthorized");
+    }
+
+});
+
+app.post('/chat-msg-endpoint', (req, res) => {
+    token = req.headers['authorization'];
+    if(token == compute_token){
+        msg = req.body.msg;
+        end = req.body.end;
+        user = req.body.user;
+        console.log(msg);
+        sendChatUpdateToClient(user, msg, end);
+        res.status(200).send("Chat message sent");
+    }
+    else{
+        res.send("Unauthorized");
+    }
+
+});
+
 app.get('/sd', (req, res) => {
     if (checkUser(req.session.user)) {
         lastrequest = getUserdata(req.session.user.username, "lastrequest")
@@ -129,7 +254,7 @@ app.post('/sd-submit', (req, res) => {
 app.get('/compute-endpoint', (req, res) => {
     token = req.headers['authorization'];
     type = req.headers['type'];
-    if(token == "testtoken"){
+    if(token == compute_token){
         if(type == "request"){
             if(requeststack.length == 0){
                 res.send(null);
@@ -190,7 +315,7 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
 });
     
 
-const clients = new Map();
+const SDclients = new Map();
 
 app.get('/sd-events', function(req, res) {
     const headers = {
@@ -206,10 +331,10 @@ app.get('/sd-events', function(req, res) {
         res
     };
 
-    clients.set(username, newClient);
+    SDclients.set(username, newClient);
 
     req.on('close', () => {
-        clients.delete(username);
+        SDclients.delete(username);
     });
 });
 
@@ -288,7 +413,7 @@ function getUserdata(user, key) {
 }
 
 function sendImageUpdateToClient(username, imagepath) {
-    const client = clients.get(username);
+    const client = SDclients.get(username);
     if (client) {
         client.res.write(`data: ${JSON.stringify({ imagepath })}\n\n`);
         client.lastimg = imagepath;

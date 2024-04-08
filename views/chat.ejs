@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat</title>
+    <style>
+        .chat-window {
+            height: calc(100vh - 100px); /* Subtract the height of the input and buttons from the viewport height */
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+    </style>
+    
+</head>
+<body>
+    <div class="chat-window" id="chatWindow">
+        <!-- Chat messages will be displayed here -->
+    </div>
+    <div>
+        <input type="text" id="messageInput" placeholder="Type your message..." style="font-size: 20px; width: 300px;" onkeydown="handleKeyDown(event)" autofocus>
+        <button onclick="sendMessage()">Send</button>
+        <button onclick="deleteHistory()">Delete History</button> <!-- Add the delete history button -->
+    </div>
+
+    <script>
+        function sendMessage() {
+            var message = document.getElementById("messageInput").value;
+            var chatWindow = document.getElementById("chatWindow");
+            var newMessage = document.createElement("p");
+            newMessage.textContent = "User: " + message; // Add "User: " before the message
+            chatWindow.appendChild(newMessage);
+            document.getElementById("messageInput").value = "";
+
+            // Send message to /chat-msg endpoint
+            fetch('/chat-msg', {
+                method: 'POST',
+                body: JSON.stringify({ msg: message }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .catch(error => {
+                // Handle error if needed
+            });
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        }
+
+        function deleteHistory() {
+            fetch('/delete-history', {
+                method: 'POST'
+            })
+            .then(response => {
+                // Handle response if needed
+            })
+            .catch(error => {
+                // Handle error if needed
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+        const eventSource = new EventSource('/chat-events');
+
+        eventSource.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            console.log(data.msg);
+            if (data.end){
+                ongoing = false;
+            }
+            else
+            {
+                botMessage(data.msg);
+            }
+        };
+        });
+
+
+        ongoing = false;
+        currentMessage = null;
+
+        function botMessage(bit) {
+            if (ongoing) {
+                currentMessage.textContent += bit;
+            }
+            else {
+                ongoing = true;
+                const chatWindow = document.getElementById("chatWindow");
+                const newMessage = document.createElement("p");
+                currentMessage = newMessage;
+                newMessage.textContent = "Bot: " + bit;
+                chatWindow.appendChild(newMessage);
+            }
+        }
+
+    </script>
+</body>
+</html>
