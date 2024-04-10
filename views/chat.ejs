@@ -1,26 +1,69 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>Chat</title>
     <style>
         .chat-window {
-            height: calc(100vh - 100px); /* Subtract the height of the input and buttons from the viewport height */
+            height: calc(100vh - 100px);
+            /* Subtract the height of the input and buttons from the viewport height */
             overflow-y: scroll;
             border: 1px solid #ccc;
             padding: 10px;
         }
+
+        pre {
+            position: relative;
+            /* Establishes a new positioning context for children */
+            overflow: auto;
+            /* Allows for scrolling within the pre block */
+            background-color: #f5f5f5;
+            padding: 10px;
+            margin-top: 20px;
+            /* Adds space between consecutive code blocks */
+            border-radius: 5px;
+            /* Ensure there's space for the copy button inside the pre element */
+            padding-right: 60px;
+            /* Adjust based on the size of your copy button */
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 5px;
+            /* Adjust as needed */
+            right: 5px;
+            /* Adjust as needed, keeping in mind pre's padding */
+            padding: 5px 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            z-index: 10;
+            /* Ensure the button is above the text */
+        }
     </style>
-    
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js/styles/default.min.css">
+
 </head>
+
 <body>
     <div class="chat-window" id="chatWindow">
         <!-- Chat messages will be displayed here -->
     </div>
     <div>
-        <input type="text" id="messageInput" placeholder="Type your message..." style="font-size: 20px; width: 300px;" onkeydown="handleKeyDown(event)" autofocus>
+        <input type="text" id="messageInput" placeholder="Type your message..." style="font-size: 20px; width: 300px;"
+            onkeydown="handleKeyDown(event)" autofocus>
         <button onclick="sendMessage()">Send</button>
         <button onclick="deleteHistory()">Delete History</button> <!-- Add the delete history button -->
     </div>
+
 
     <script>
         function sendMessage() {
@@ -39,9 +82,9 @@
                     'Content-Type': 'application/json'
                 }
             })
-            .catch(error => {
-                // Handle error if needed
-            });
+                .catch(error => {
+                    // Handle error if needed
+                });
         }
 
         function handleKeyDown(event) {
@@ -54,48 +97,105 @@
             fetch('/delete-history', {
                 method: 'POST'
             })
-            .then(response => {
-                // Handle response if needed
-            })
-            .catch(error => {
-                // Handle error if needed
-            });
+                .then(response => {
+                    // Handle response if needed
+                })
+                .catch(error => {
+                    // Handle error if needed
+                });
         }
 
         document.addEventListener('DOMContentLoaded', (event) => {
-        const eventSource = new EventSource('/chat-events');
+            const eventSource = new EventSource('/chat-events');
 
-        eventSource.onmessage = function (event) {
-            const data = JSON.parse(event.data);
-            console.log(data.msg);
-            if (data.end){
-                ongoing = false;
-            }
-            else
-            {
-                botMessage(data.msg);
-            }
-        };
+            eventSource.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                if (data.end) {
+                    ongoing = false;
+                }
+                else {
+                    botMessage(data.msg);
+                }
+            };
         });
 
 
         ongoing = false;
-        currentMessage = null;
+        currentRawMessage = ""; // Store the raw Markdown content
 
         function botMessage(bit) {
             if (ongoing) {
-                currentMessage.textContent += bit;
+                // Append new bit to the raw message content
+                currentRawMessage += bit;
+                // Re-parse the updated Markdown content and sanitize it
+                currentMessage.innerHTML = DOMPurify.sanitize(marked.parse(currentRawMessage));
+                addCopyButtonsToNewCodeBlocks();
+                updateCodeSyntaxHighlighting();
             }
             else {
                 ongoing = true;
                 const chatWindow = document.getElementById("chatWindow");
                 const newMessage = document.createElement("p");
                 currentMessage = newMessage;
-                newMessage.textContent = "Bot: " + bit;
+                console.log(currentMessage)
+                // Start new message with the first bit
+                currentRawMessage = bit; // Reset the raw message content
+                // Parse and sanitize the Markdown content
+                newMessage.innerHTML = DOMPurify.sanitize("Bot: " + marked.parse(currentRawMessage));
                 chatWindow.appendChild(newMessage);
             }
         }
 
+        function addCopyButtonsToNewCodeBlocks() {
+            document.querySelectorAll('pre code').forEach((codeBlock) => {
+                const preElement = codeBlock.parentNode;
+                if (preElement && !preElement.getAttribute("data-copy-button-added")) {
+                    const btn = document.createElement('button');
+                    btn.textContent = 'Copy';
+                    btn.className = 'copy-btn';
+                    btn.type = 'button';
+
+                    preElement.setAttribute("data-copy-button-added", "true");
+
+                    btn.onclick = function () {
+                        navigator.clipboard.writeText(codeBlock.textContent).then(() => {
+                            btn.textContent = 'Copied!';
+                            setTimeout(() => btn.textContent = 'Copy', 2000);
+                        }).catch(err => console.error('Copy failed', err));
+                    };
+
+                    // Insert the button before the code block inside the pre element
+                    preElement.insertBefore(btn, codeBlock);
+                }
+            });
+        }
+        document.addEventListener('DOMContentLoaded', (event) => {
+
+            hljs.highlightAll();
+
+            addCopyButtonsToNewCodeBlocks();
+            updateCodeSyntaxHighlighting();
+
+        });
+
+        function updateCodeSyntaxHighlighting() {
+            document.querySelectorAll('pre code').forEach((block) => {
+                if (block.getAttribute('data-highlighted') === "yes") {
+                    return;
+                }
+                else {
+                    hljs.highlightElement(block);
+                    
+                    const classList = Array.from(block.classList);
+                    const languageClass = classList.find(cls => cls.startsWith('language-'));
+                    const detectedLanguage = languageClass ? languageClass.replace('language-', '') : 'auto-detected';
+
+                    console.log(`Detected language: ${detectedLanguage}`);
+                }
+            });
+        }
+
     </script>
 </body>
+
 </html>
