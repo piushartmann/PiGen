@@ -152,6 +152,20 @@ function sendChatUpdateToClient(username, msg, end) {
     }
 }
 
+app.get('/load-conversation', (req, res) => {
+    if (checkUser(req.session.user)) {
+        ChatHistory = getUserdata(req.session.user.username, "history");
+        if (ChatHistory == null) {
+            ChatHistory = [];
+        }
+        res.status(200).send(ChatHistory);
+    }
+    else {
+        res.status(401).send("Unauthorized");
+    }
+
+});
+
 app.post('/add-to-history', (req, res) => {
     token = req.headers['authorization'];
     if(token == compute_token){

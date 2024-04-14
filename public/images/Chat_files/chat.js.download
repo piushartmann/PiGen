@@ -1,17 +1,6 @@
-
-
-window.MathJax = {
-    tex: {
-        inlineMath: [['$', '$'], ['\\(', '\\)']]
-    },
-    svg: {
-        fontCache: 'global'
-    }
-};
-
 function sendMessage() {
     var message = document.getElementById("messageInput").value;
-
+    
     makeNewMessage(message, false)
     document.getElementById("messageInput").value = "";
 
@@ -35,21 +24,8 @@ function loadConversation() {
         .then(data => {
             var chatWindow = document.getElementById("chatWindow");
             chatWindow.innerHTML = "";
-            console.log(data);
             data.forEach(function (message) {
-                isBot = message.role == "assistant"
-                array = makeNewMessage(message.content, isBot);
-                addElementsToNewCodeBlocks();
-                updateCodeSyntaxHighlighting();
-                try {
-                    MathJax.typesetPromise([array[0]]).catch(function (err) {
-                        console.error('MathJax typesetPromise failed:', err);
-                    });
-                } catch (error) {
-                    console.error('MathJax typesetPromise failed:', error);
-                }
-
-                updateScroll(true);
+                makeNewMessage(message.msg, message.isBot);
             });
         })
         .catch(error => {
@@ -70,12 +46,7 @@ function makeNewMessage(message, isBot) {
     newDIV.className = isBot ? "botMessage" : "userMessage";
     newImage.className = isBot ? "botImage" : "userImage";
 
-    if (isBot) {
-        newMessage.innerHTML = marked.parse(message);
-    }
-    else {
-        newMessage.textContent = message;
-    }
+    newMessage.textContent = message;
     newDIV.appendChild(newMessage);
     chatWindow.appendChild(newDIV);
     newDIV.insertBefore(newImage, newMessage);
@@ -110,6 +81,21 @@ function deleteHistory() {
         method: 'POST'
     })
 }
+
+document.addEventListener('DOMContentLoaded', (event) => {
+    const eventSource = new EventSource('/chat-events');
+
+    eventSource.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        if (data.end) {
+            ongoing = false;
+        }
+        else {
+            botMessage(data.msg);
+        }
+    };
+});
+
 
 ongoing = false;
 currentRawMessage = "";
@@ -197,21 +183,16 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
     hljs.highlightAll();
 
-
     addElementsToNewCodeBlocks();
     updateCodeSyntaxHighlighting();
 
-    loadConversation();
 
-    const eventSource = new EventSource('/chat-events');
-
-    eventSource.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        if (data.end) {
-            ongoing = false;
-        }
-        else {
-            botMessage(data.msg);
+    window.MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']]
+        },
+        svg: {
+            fontCache: 'global'
         }
     };
 });
