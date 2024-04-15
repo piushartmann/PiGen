@@ -12,7 +12,7 @@ window.MathJax = {
 function sendMessage() {
     var message = document.getElementById("messageInput").value;
 
-    makeNewMessage(message, false)
+    makeNewMessage(message, "user")
     document.getElementById("messageInput").value = "";
 
     // Send message to /chat-msg endpoint
@@ -38,7 +38,12 @@ function loadConversation() {
             console.log(data);
             data.forEach(function (message) {
                 isBot = message.role == "assistant"
-                array = makeNewMessage(message.content, isBot);
+                if (isBot) {
+                    array = makeNewMessage(message.content, "bot");
+                }
+                else {
+                    array = makeNewMessage(message.content, "user");
+                }
                 addElementsToNewCodeBlocks();
                 updateCodeSyntaxHighlighting();
                 try {
@@ -47,6 +52,8 @@ function loadConversation() {
                     });
                 } catch (error) {
                     console.error('MathJax typesetPromise failed:', error);
+                    location.reload();
+
                 }
 
                 updateScroll(true);
@@ -58,12 +65,21 @@ function loadConversation() {
 
 }
 
-function makeNewMessage(message, isBot) {
+function makeNewMessage(message, user) {
     var isScrolledToBottom = getScrolledToBottom();
     var chatWindow = document.getElementById("chatWindow");
     var newDIV = document.createElement("div");
     var newMessage = document.createElement("p");
     var newImage = document.createElement("img");
+    isBot = user == "bot"
+    isSystem = user == "system"
+    if (isSystem) {
+        newMessage.textContent = message;
+        newMessage.className = "systemMessage";
+        chatWindow.appendChild(newMessage);
+        return newMessage;
+    }
+
     newImage.src = isBot ? "/icons/bot.png" : "/icons/user.png";
     newImage.alt = isBot ? "Bot" : "User";
 
@@ -76,6 +92,7 @@ function makeNewMessage(message, isBot) {
     else {
         newMessage.textContent = message;
     }
+
     newDIV.appendChild(newMessage);
     chatWindow.appendChild(newDIV);
     newDIV.insertBefore(newImage, newMessage);
@@ -133,7 +150,7 @@ function botMessage(bit) {
     else {
         var isScrolledToBottom = getScrolledToBottom();
         ongoing = true;
-        array = makeNewMessage("", true);
+        array = makeNewMessage("", "bot");
         currentMessage = array[0];
         currentDIV = array[1];
         console.log(currentMessage)
@@ -151,10 +168,16 @@ function addElementsToNewCodeBlocks() {
         if (preElement && !preElement.getAttribute("elements-added")) {
             const btn = document.createElement('button');
             const lan = document.createElement('span');
+            const run = document.createElement('button');
 
             btn.textContent = 'Copy';
             btn.className = 'copy-btn';
             btn.type = 'button';
+
+            run.textContent = 'Run!';
+            run.className = 'run-btn';
+            run.type = 'button';
+            run.hidden = true;
 
 
             lan.className = 'lanLabel';
@@ -170,6 +193,7 @@ function addElementsToNewCodeBlocks() {
             };
 
             preElement.insertBefore(btn, codeBlock);
+            preElement.insertBefore(run, btn);
             preElement.insertBefore(lan, btn);
 
             updateLanLabel(lan);
@@ -182,11 +206,31 @@ function updateLanLabel(lan) {
         return;
     }
     const pre = lan.parentNode;
+    run = pre.querySelectorAll('.run-btn')[0];
     codeBlock = pre.querySelectorAll('code')[0]
     const languageClass = Array.from(codeBlock.classList).find(cls => cls.startsWith('language-'));
     if (languageClass) {
         const language = languageClass.split('-')[1];
         lan.textContent = language;
+        if (language === "javascript") {
+            run.hidden = false;
+            run.onclick = function () {
+                const pre = lan.parentNode;
+                const codeBlock = pre.querySelectorAll('code')[0];
+                var code = codeBlock.textContent
+                if (code.endsWith("\n")) {
+                    code = code.slice(0, -1);
+                }
+                //catchErrors = code + ".catch(error => {console.error('Error running code:', error);});";
+                console.log('Running code:');
+                console.log(code);
+                try {
+                    setTimeout(code, 5);
+                } catch (error) {
+                    console.error('Error running code:', error);
+                }
+            };
+        }
     } else {
         lan.textContent = "Unknown";
     }

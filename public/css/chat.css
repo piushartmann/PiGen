@@ -2,6 +2,20 @@
     --color-primary: #3088ca;
     --color-primary-bright: #88afcc;
     --color-secondary: #f0f0f0;
+    --background-color: #ffffff;
+    --text-color: black;
+}
+
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --color-primary: #3088ca;
+        --color-primary-bright: #88afcc;
+        --color-secondary: #f0f0f0;
+        --background-color: #242424;
+        --text-color: white;
+    }
 }
 
 
@@ -42,17 +56,8 @@
     height: 30px;
     font-size: 20px;
     margin-bottom: 15px;
-}
-
-@media (max-width: 768px) {
-    .messageInput {
-        width: 90%;
-        margin-left: 5%;
-    }
-
-    .deleteHistory {
-        margin-right: 5px !important;
-    }
+    background-color: var(--input-color);
+    color: var(--text-color);
 }
 
 .deleteHistory {
@@ -110,6 +115,19 @@ pre {
     z-index: 10;
 }
 
+.run-btn {
+    position: absolute;
+    top: 35px;
+    right: 5px;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    background-color: #00ff80;
+    color: rgb(0, 0, 0);
+    z-index: 10;
+}
+
 .lanLabel {
     position: absolute;
     top: 9px;
@@ -119,6 +137,7 @@ pre {
     border-radius: 5px;
     background-color: #e0e0e0;
     color: black;
+    margin-right: 10px;
     z-index: 10;
 }
 
@@ -129,6 +148,7 @@ mjx-container {
 body {
     overflow-y: auto;
     overflow-x: hidden;
+    background-color: var(--background-color);
 }
 
 .userMessage {
@@ -146,6 +166,11 @@ body {
 .botMessage>p {
     margin-top: 4px;
     width: 100%;
+    color: var(--text-color);
+}
+
+.userMessage>p {
+    color: var(--text-color);
 }
 
 .botImage {
@@ -156,6 +181,7 @@ body {
     border-radius: 50%;
     margin-right: 10px;
     background-color: yellow;
+
 }
 
 .userImage {
@@ -166,4 +192,15 @@ body {
     border-radius: 50%;
     margin-right: 10px;
     background-color: lightgreen;
+}
+
+@media (max-width: 768px) {
+    .messageInput {
+        width: 90%;
+        margin-left: 5%;
+    }
+
+    .deleteHistory {
+        margin-right: 5px;
+    }
 }
