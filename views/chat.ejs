@@ -31,10 +31,11 @@
     <div class="userInput">
         <input class="messageInput" type="text" id="messageInput" placeholder="Type your message..."
             onkeydown="handleKeyDown(event)" autofocus>
-        <button class="sendButton" onclick="sendMessage()">
+            
+        <button id="sendButton" class="sendButton" onclick="sendButtonClicked()">
             <img src="/icons/paper-plane-solid.svg" alt="Icon">
         </button>
-        <button class="deleteHistory" onclick="deleteHistory()">
+        <button id="deleteHistory" class="deleteHistory" onclick="deleteHistory()">
             <img src="/icons/delete-button.svg" alt="Icon"
                 style="width: 100%; filter: invert(0.5) sepia(1) saturate(100) hue-rotate(0deg);">
         </button>

@@ -297,13 +297,84 @@ app.get('/chat-events', function (req, res) {
     });
 });
 
-function sendChatUpdateToClient(username, msg, end) {
-    const client = Chatclients.get(username);
-    if (client) {
-
-        client.res.write(`data: ${JSON.stringify({ msg, end })}\n\n`);
+app.post('/stop-chat', (req, res) => {
+    if (checkUser(req.session.user)) {
+        stopChat();
     }
-}
+    else {
+        res.send("Unauthorized");
+    }
+});
+
+app.post('/edit-message', (req, res) => {
+    if(checkUser(req.session.user)) {
+        if (getSetting("chatEnabled")) {
+            user = req.session.user.username;
+            index = req.body.index;
+            newmsg = req.body.message;
+            ChatHistory = getUserdata(user, "history");
+            if (ChatHistory == null) {
+                return;
+            }
+            ChatHistory[index].content = newmsg;
+            ChatHistory = ChatHistory.slice(0, index);
+            addUserdata(user, "history", ChatHistory);
+
+            requeststack.push({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
+            res.status(200).send("Message edited");
+        } else {
+            res.send("Chat is disabled");
+        }
+
+    }
+});
+
+app.post('/delete-message', (req, res) => {
+    if (checkUser(req.session.user)) {
+        if (getSetting("chatEnabled")) {
+            user = req.session.user.username;
+            index = req.body.index;
+            ChatHistory = getUserdata(user, "history");
+            if (ChatHistory == null) {
+                return;
+            }
+            ChatHistory.splice(index, 1);
+            addUserdata(user, "history", ChatHistory);
+            res.status(200).send("Message removed");
+        } else {
+            res.send("Chat is disabled");
+        }
+
+    }
+    else {
+        res.send("Unauthorized");
+    }
+});
+
+app.post('/regenerate-message', (req, res) => {
+    if (checkUser(req.session.user)) {
+        if (getSetting("chatEnabled")) {
+            user = req.session.user.username;
+            index = req.body.index;
+            ChatHistory = getUserdata(user, "history");
+            if (ChatHistory == null) {
+                return;
+            }
+            //delete every message after the one to be regenerated
+            ChatHistory = ChatHistory.slice(0, index);
+            addUserdata(user, "history", ChatHistory);
+
+            requeststack.push({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
+            res.status(200).send("Message removed");
+        } else {
+            res.send("Chat is disabled");
+        }
+
+    }
+    else {
+        res.send("Unauthorized");
+    }
+});
 
 app.post('/load-conversation', (req, res) => {
     if (checkUser(req.session.user)) {
@@ -585,6 +656,14 @@ app.post('/sync-settings', (req, res) => {
     }
 
 });
+
+function sendChatUpdateToClient(username, msg, end) {
+    const client = Chatclients.get(username);
+    if (client) {
+
+        client.res.write(`data: ${JSON.stringify({ msg, end })}\n\n`);
+    }
+}
 
 function addUserdata(user, key, data) {
     if (!global.userdata[user]) {

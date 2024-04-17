@@ -8,6 +8,33 @@ window.MathJax = {
 };
 
 global = {};
+global.messages = 0;
+global.generating = false;
+
+function sendButtonClicked() {
+    if (!global.generating) {
+        if (global.editing) {
+            sendEditedMessage(global.lastSelected);
+        }
+        else{
+            sendMessage();
+        }
+    }
+    else {
+        stopGeneration();
+    }
+}
+
+function stopGeneration() {
+    fetch('/stop-chat', {
+        method: 'POST'
+    })
+        .catch(error => {
+            console.error('Stop-generation error:', error);
+        });
+    generationStop();
+
+}
 
 function sendMessage() {
     var message = document.getElementById("messageInput").value;
@@ -15,7 +42,7 @@ function sendMessage() {
     makeNewMessage(message, "user")
     document.getElementById("messageInput").value = "";
 
-    // Send message to /chat-msg endpoint
+    generationStarted();
     fetch('/chat-msg', {
         method: 'POST',
         body: JSON.stringify({ msg: message }),
@@ -89,14 +116,18 @@ function makeNewMessage(message, user) {
 
     if (isBot) {
         newMessage.innerHTML = marked.parse(message);
-        newImage.onclick = function () {
-            const message = newImage.parentElement
-            MessageOptions(message);
-        };
     }
     else {
         newMessage.textContent = message;
     }
+
+    newImage.onclick = function () {
+        const message = newImage.parentElement;
+        MessageOptions(message);
+    };
+
+    newDIV.id = global.messages;
+    global.messages += 1;
 
     newDIV.appendChild(newMessage);
     chatWindow.appendChild(newDIV);
@@ -106,35 +137,149 @@ function makeNewMessage(message, user) {
 }
 
 function MessageOptions(message) {
-    lastSelected = global.lastSelected
-    if (message.classList.contains("blurBox")) {
-        remove(message);
+
+    if (message.querySelector('.blurBox') != null) {
+        removeOptions(message);
     }
     else {
-        if (lastSelected != null && lastSelected) {
-            remove(lastSelected);
+        if (global.lastSelected != null && global.lastSelected) {
+            removeOptions(global.lastSelected);
         }
-        add(message);
-    }
-    function remove(message) {
-        message.classList.remove("blurBox");
-        message.removeChild(removeButton);
-        message.removeChild(regenerateButton);
-        global.lastSelected = null;
-    }
-    function add(message) {
-        message.classList.add("blurBox");
-        removeButton = document.createElement("button");
-        regenerateButton = document.createElement("button");
-
-        regenerateButton.className = "regenerateButton";
-        removeButton.className = "removeButton";
-        regenerateButton.textContent = "Regenerate";
-        removeButton.textContent = "Delete";
-        message.appendChild(removeButton);
-        message.appendChild(regenerateButton);
         global.lastSelected = message;
+        addOptions(message);
     }
+
+    function removeOptions(message) {
+        isBot = message.classList.contains("botMessage") == true;
+        lastblurbox = message.querySelector('.blurBox');
+        if (lastblurbox == null) {
+            return;
+        }
+        lastblurbox.style.animation = 'none';
+        lastblurbox.offsetHeight;
+        lastblurbox.style.animation = "blur-anim 300ms linear reverse";
+
+        lastblurbox.removeChild(removeButton);
+
+        if (isBot) {
+            lastblurbox.removeChild(regenerateButton);
+        }
+        else {
+            lastblurbox.removeChild(editButton);
+        }
+
+        setTimeout(() => {
+            message.removeChild(lastblurbox);
+        }, 300);
+    }
+
+    function addOptions(message) {
+        isBot = message.classList.contains("botMessage") == true;
+        removeButton = document.createElement("button");
+        blurbox = document.createElement("div");
+        blurbox.className = "blurBox";
+        blurbox.onclick = function (event) { MessageOptions(message); };
+
+        if (isBot) {
+            regenerateButton = document.createElement("button");
+            regenerateButton.classList = ["regenerateButton button"];
+            regenerateButton.textContent = "Regenerate";
+            regenerateButton.onclick = function () { regenerateMessage(message) };
+            blurbox.appendChild(regenerateButton);
+        }
+        else{
+            editButton = document.createElement("button");
+            editButton.classList = ["editButton button"];
+            editButton.textContent = "Edit";
+            editButton.onclick = function () { editMessage(message) };
+            blurbox.appendChild(editButton);
+        }
+
+        removeButton.classList = ["removeButton button"];
+        removeButton.textContent = "Delete";
+        removeButton.onclick = function () { removeMessage(message) };
+
+        message.appendChild(blurbox);
+        blurbox.appendChild(removeButton);
+    }
+}
+
+function editMessage(message) {
+    p = message.querySelector('p')
+    p.contentEditable = true;
+    p.focus();
+    p.addEventListener('keydown', (evt) => {
+        console.log(evt.key)
+        if (evt.key === "Enter") {
+            sendEditedMessage(message);
+            evt.preventDefault();
+        }
+        if (evt.key === "Escape") {
+            stopEditingMessage(message);
+            evt.preventDefault();
+        }
+    });
+    global.editing = true;
+}
+
+function stopEditingMessage(message) {
+    p = message.querySelector('p')
+    p.contentEditable = false;
+    global.editing = false;
+
+}
+
+function sendEditedMessage(message) {
+    global.editing = false;
+    newContent = p.textContent;
+    fetch('/edit-message', {
+        method: 'POST',
+        body: JSON.stringify({ index: message.id, message: newContent }),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(data => {
+            generationStarted();
+            chat = document.getElementById("chatWindow");
+            while (message.nextElementSibling) {
+                chat.removeChild(message.nextElementSibling);
+            }
+            chat.removeChild(message);
+            makeNewMessage(newContent, "user");
+        })
+}
+
+function regenerateMessage(message) {
+    fetch('/regenerate-message', {
+        method: 'POST',
+        body: JSON.stringify({ index: message.id }),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(data => {
+            generationStarted();
+            chat = document.getElementById("chatWindow");
+            while (message.nextElementSibling) {
+                chat.removeChild(message.nextElementSibling);
+            }
+            chat.removeChild(message);
+        })
+}
+
+function removeMessage(message) {
+    fetch('/delete-message', {
+        method: 'POST',
+        body: JSON.stringify({ index: message.id }),
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+        .then(data => {
+            chat = document.getElementById("chatWindow");
+            chat.removeChild(message);
+        })
 }
 
 function updateScroll(isScrolledToBottom) {
@@ -152,7 +297,14 @@ function getScrolledToBottom() {
 
 function handleKeyDown(event) {
     if (event.key === "Enter") {
-        sendMessage();
+        if (!global.generating) {
+            if (global.editing) {
+                sendEditedMessage(global.lastSelected);
+            }
+            else{
+                sendMessage();
+            }
+        }
     }
 }
 
@@ -289,13 +441,33 @@ document.addEventListener('DOMContentLoaded', (event) => {
     eventSource.onmessage = function (event) {
         const data = JSON.parse(event.data);
         if (data.end) {
-            ongoing = false;
+            generationStop();
         }
         else {
             botMessage(data.msg);
         }
     };
+
+
 });
+
+function generationStarted() {
+    sendButton = document.getElementById("sendButton");
+    img = sendButton.querySelector('img')
+    global.generating = true;
+    img.src = "/icons/Github-Octicons-X-24.svg";
+    sendButton.style = "background-image: linear-gradient(45deg, red, lightcoral);";
+
+}
+
+function generationStop() {
+    ongoing = false;
+    sendButton = document.getElementById("sendButton");
+    img = sendButton.querySelector('img')
+    global.generating = false;
+    img.src = "/icons/paper-plane-solid.svg";
+    sendButton.style = "background-image: linear-gradient(45deg, var(--color-primary), var(--color-primary-bright));";
+}
 
 function updateCodeSyntaxHighlighting() {
     document.querySelectorAll('pre code').forEach((block) => {
