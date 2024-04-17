@@ -4,6 +4,9 @@
     --color-secondary: #f0f0f0;
     --background-color: #ffffff;
     --text-color: black;
+
+    --bot-color: yellow;
+    --user-color: lightgreen;
 }
 
 
@@ -15,34 +18,42 @@
         --color-secondary: #f0f0f0;
         --background-color: #242424;
         --text-color: white;
+
+        --bot-color: #a467fc;
+        --user-color: #358dff;
     }
 }
 
 
 .chat-window {
     position: absolute;
-    height: calc(100% - max(8%, 90px));
+    height: calc(100% - max(5%, 50px));
     width: auto;
     top: 0;
     bottom: 0;
     left: 0;
     right: 0;
     overflow-y: scroll;
-    border: 1px solid #ccc;
     padding: 10px;
     padding-bottom: 0px;
-    margin: 10px;
     margin-bottom: 0px;
+    overflow-x: hidden;
 }
 
 .userInput {
     position: absolute;
     width: 100%;
     bottom: 0;
-    height: max(5%, 50px);
+    height: 50px;
     align-items: center;
     display: flex;
     flex-shrink: 1 0 auto;
+    padding-top: 15px;
+    z-index: 11;
+    background-color: var(--background-color);
+    border-top: 1px solid #ccc;
+    backdrop-filter: blur(5px);
+
 }
 
 .messageInput {
@@ -146,7 +157,7 @@ mjx-container {
 }
 
 body {
-    overflow-y: auto;
+    overflow-y: hidden;
     overflow-x: hidden;
     background-color: var(--background-color);
 }
@@ -161,12 +172,14 @@ body {
     display: flex;
     justify-content: left;
     align-items: center;
+    word-wrap: break-word;
 }
 
 .botMessage>p {
     margin-top: 4px;
-    width: 100%;
+    width: calc(100% - 35px);
     color: var(--text-color);
+    word-wrap: break-word;
 }
 
 .userMessage>p {
@@ -180,8 +193,7 @@ body {
     border: 1px solid #ccc;
     border-radius: 50%;
     margin-right: 10px;
-    background-color: yellow;
-
+    background-color: var(--bot-color);
 }
 
 .userImage {
@@ -191,7 +203,7 @@ body {
     border: 1px solid #ccc;
     border-radius: 50%;
     margin-right: 10px;
-    background-color: lightgreen;
+    background-color: var(--user-color);
 }
 
 @media (max-width: 768px) {
@@ -202,5 +214,10 @@ body {
 
     .deleteHistory {
         margin-right: 5px;
+    }
+    
+    .lanLabel {
+        top: 8px;
+        right: 50px;
     }
 }

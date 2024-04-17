@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Settings Page</title>
+    <script type="text/javascript" src="/js/userSettings.js"></script>
+</head>
+
+<body>
+    <h1>Settings</h1>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
+
+    <form action="/createUser" method="POST">
+        <label for="username">Username:</label>
+        <input type="username" id="username" name="username" required autocomplete="username"><br><br>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required autocomplete="new-password"><br><br>
+
+        <label for="admin">Admin:</label>
+        <input type="checkbox" id="admin" name="admin"><br><br>
+
+        <input id="submit" type="submit" value="Update User">
+
+        <button class="delete" type="button" onclick="deleteUser()">
+            <span class="button-text">Delete User</span>
+        </button>
+    </form>
+    <details>
+        <summary style="user-select: none;"onclick="loadChat()">Show Chat:</summary>
+        <table id="chat"></table>
+    </details>
+</body>
+
+</html>
+
+<script>
+    user = "<%= user %>"
+    password = "<%= password %>"
+    admin = "<%= admin %>"
+
+    usernameField = document.getElementById("username")
+    usernameField.value = user
+
+    passwordField = document.getElementById("password")
+    passwordField.value = password
+    passwordField.type = "text"
+
+    adminBox = document.getElementById("admin")
+    if (admin == "true") {
+        adminBox.checked = true
+    }
+</script>

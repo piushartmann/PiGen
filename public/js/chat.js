@@ -1,5 +1,3 @@
-
-
 window.MathJax = {
     tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']]
@@ -29,7 +27,7 @@ function sendMessage() {
 }
 function loadConversation() {
     fetch('/load-conversation', {
-        method: 'GET'
+        method: 'POST'
     })
         .then(response => response.json())
         .then(data => {

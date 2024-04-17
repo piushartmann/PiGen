@@ -2,21 +2,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="css/home.css">
+  <script type="text/javascript" src="js/home.js"></script>
+  
 </head>
 <body>
   <div class="container">
     <h1>Welcome, <%= username %>!</h1>
 
     <div class="grid-container">
-      <a class="grid-item sd-logo" href="/sd"></a>
-      <a class="grid-item chat-logo" href="/chat"></a>
+      <a class="grid-item" href="/sd">
+        <img src="/icons/stable_diffusion_logo.png" alt="SD Logo">
+      </a>
+      <a class="grid-item" href="/chat">
+        <img src="/icons/llama.png" alt="Chat Logo">
+      </a>
       <div class="grid-item comingsoon">Coming Soon</div>
+
     </div>
 
     <form action="/logout" method="POST">
       <button class="logout-button" type="submit">Logout</button>
     </form>
+
+    <button class="settings-button" onclick="location.href = '/settings'">
+      <span class="button-text">Settings</span>
+    </button>
+    
   </div>
 </body>
 </html>
+
+<script>
+  username = "<%= username %>"
+  document.addEventListener('DOMContentLoaded', (event) => {
+    setAdmin(<%= admin %>);
+});
+</script>

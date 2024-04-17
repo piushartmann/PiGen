@@ -5,14 +5,15 @@ const session = require('cookie-session')
 const multer = require('multer');
 const Jimp = require('jimp');
 const e = require('express');
+const { get } = require('http');
 const app = express();
 
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, 'public/uploads/')
+        cb(null, 'public/uploads/')
     },
     filename: function (req, file, cb) {
-      cb(null, file.originalname)
+        cb(null, file.originalname)
     }
 })
 var upload = multer({ storage: storage })
@@ -24,15 +25,16 @@ app.use(express.urlencoded({
 }));
 app.use(express.static('public'));
 app.use(session({
-    secret: 'pius',
+    secret: 'secret',
     resave: false,
     saveUninitialized: false
-  }));
+}));
 
 
 keyfile = null;
 keysynced = false;
 userdata = {};
+settings = {};
 
 console.log("Starting");
 
@@ -40,20 +42,15 @@ var requeststack = [];
 const compute_token = "testtoken";
 
 app.get('/', (req, res) => {
-    if (req.session.views) {
-      req.session.views++
-    } else {
-      req.session.views = 1
-    }
     if (checkUser(req.session.user)) {
         res.redirect('/home');
         return;
     }
     else {
-        res.render("login.ejs", {views: req.session.views});
+        res.render("login.ejs", { connected: keysynced });
         return;
     }
-  });
+});
 
 
 app.post('/login', (req, res) => {
@@ -61,7 +58,7 @@ app.post('/login', (req, res) => {
     const password = req.body.password;
 
     if (validate_password(user, password)) {
-        req.session.user = {username: user, password: password};
+        req.session.user = { username: user, password: password };
         res.redirect('/home');
     }
     else {
@@ -76,7 +73,7 @@ app.post('/logout', (req, res) => {
 
 app.get('/home', (req, res) => {
     if (checkUser(req.session.user)) {
-        res.render("home.ejs", {username: req.session.user.username});
+        res.render("home.ejs", { username: req.session.user.username, admin: checkAdmin(req.session.user.username) });
     }
     else {
         res.redirect('/');
@@ -84,9 +81,146 @@ app.get('/home', (req, res) => {
 
 });
 
+app.get('/settings', (req, res) => {
+    if (checkUser(req.session.user)) {
+        if (checkAdmin(req.session.user.username)) {
+            res.render("settings.ejs", { chatEnabled: getSetting("chatEnabled"), model: getSetting("model")});
+        }
+        else {
+            res.send("You do not have the required permissions to access this page.");
+        }
+    }
+    else {
+        res.redirect('/');
+    }
+
+});
+
+app.get('/newUser', (req, res) => {
+    if (checkUser(req.session.user)) {
+        if (checkAdmin(req.session.user.username)) {
+            res.render("newUser.ejs");
+        }
+        else {
+            res.send("You do not have the required permissions to access this page.");
+        }
+    }
+    else {
+        res.redirect('/');
+    }
+});
+
+app.get('/settings/:user', (req, res) => {
+    if (checkUser(req.session.user)) {
+        if (checkAdmin(req.session.user.username)) {
+            user = req.params.user;
+            if (user == "admin") {
+                res.send("You cannot change the Admin");
+                return;
+            }
+            if (keyfile[user]) {
+                res.render("userSettings.ejs", { userdata: userdata, user: user, password: keyfile[user]["password"], admin: keyfile[user]["admin"] });
+            }
+            else {
+                res.send("User not found");
+            }
+        }
+        else {
+            res.send("You do not have the required permissions to access this page.");
+        }
+    }
+    else {
+        res.redirect('/');
+    }
+});
+
+app.post('/createUser', (req, res) => {
+    if (checkUser(req.session.user)) {
+        if (checkAdmin(req.session.user.username)) {
+            const username = req.body.username;
+            if (username == "admin") {
+                res.send("You cannot change the Admin");
+                return;
+            }
+            console.log("Creating user");
+            const password = req.body.password;
+            const admin = req.body.admin == "on";
+            keyfile[username] = { password: password, admin: admin };
+            requeststack.push({ "function": "createUser", "arguments": { username: username, password: password, admin: admin } });
+            res.redirect('/settings');
+        }
+        else {
+            res.send("You do not have the required permissions to access this page.");
+        }
+    }
+    else {
+        res.redirect('/');
+    }
+
+});
+
+app.post('/deleteUser', (req, res) => {
+    if (checkUser(req.session.user)) {
+        if (checkAdmin(req.session.user.username)) {
+            const username = req.body.username;
+            if (username == req.session.user.username) {
+                res.send("You cannot delete yourself");
+                return;
+            }
+            if (username == "admin") {
+                res.send("You cannot delete the admin");
+                return;
+            }
+            console.log("Deleting user");
+            delete keyfile[username];
+            requeststack.push({ "function": "deleteUser", "arguments": { username: username } });
+        }
+        else {
+            res.send("You do not have the required permissions to access this page.");
+        }
+    }
+    else {
+        res.redirect('/');
+    }
+});
+
+app.get('/getUser', (req, res) => {
+    if (checkUser(req.session.user)) {
+        if (checkAdmin(req.session.user.username)) {
+            res.send(keyfile);
+        }
+        else {
+            res.send("You do not have the required permissions to access this page.");
+        }
+    }
+    else {
+        res.redirect('/');
+    }
+
+});
+
+app.post('/set-chat', (req, res) => {
+    if (checkUser(req.session.user)) {
+        if (checkAdmin(req.session.user.username)) {
+            setSetting("chatEnabled", req.body.chatEnabled);
+            res.status(200).send("Chat enabled set");
+        }
+        else {
+            res.status(401).send("Unauthorized");
+        }
+    }
+    else {
+        res.status(401).send("Unauthorized");
+    }
+});
+
 app.get('/chat', (req, res) => {
     if (checkUser(req.session.user)) {
-        res.render("chat.ejs", {username: req.session.user.username});
+        if (getSetting("chatEnabled")) {
+            res.render("chat.ejs", { username: req.session.user.username });
+        } else {
+            res.send("Chat is disabled");
+        }
     }
     else {
         res.redirect('/');
@@ -98,32 +232,36 @@ app.get('/chat', (req, res) => {
 Chathistory = {};
 app.post('/chat-msg', (req, res) => {
     if (checkUser(req.session.user)) {
-        msg = {
-            "role":"user",
-            "content":req.body.msg
+        if (getSetting("chatEnabled")) {
+            msg = {
+                "role": "user",
+                "content": req.body.msg
+            }
+
+            ChatHistory = getUserdata(req.session.user.username, "history");
+            if (ChatHistory == null) {
+                ChatHistory = [];
+            }
+            ChatHistory.push(msg);
+
+            addUserdata(req.session.user.username, "history", ChatHistory);
+
+            console.log(ChatHistory);
+
+            requeststack.push({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
+
+            console.log("Chat msg requested");
+            res.status(200);
+        } else {
+            res.send("Chat is disabled");
         }
-
-        ChatHistory = getUserdata(req.session.user.username, "history");
-        if (ChatHistory == null) {
-            ChatHistory = [];
-        }
-        ChatHistory.push(msg);
-
-        addUserdata(req.session.user.username, "history", ChatHistory);
-
-        console.log(ChatHistory);
-        
-        requeststack.push({"function":"chatMsg", "arguments": {msg: ChatHistory, username: req.session.user.username}});
-        
-        console.log("Chat msg requested");
-        res.status(200);
     }
 
 });
 
 const Chatclients = new Map();
 
-app.get('/chat-events', function(req, res) {
+app.get('/chat-events', function (req, res) {
     const headers = {
         'Content-Type': 'text/event-stream',
         'Connection': 'keep-alive',
@@ -152,9 +290,14 @@ function sendChatUpdateToClient(username, msg, end) {
     }
 }
 
-app.get('/load-conversation', (req, res) => {
+app.post('/load-conversation', (req, res) => {
     if (checkUser(req.session.user)) {
-        ChatHistory = getUserdata(req.session.user.username, "history");
+        if (req.body.username) {
+            user = req.body.username;
+        } else {
+            user = req.session.user.username;
+        }
+        ChatHistory = getUserdata(user, "history");
         if (ChatHistory == null) {
             ChatHistory = [];
         }
@@ -168,7 +311,7 @@ app.get('/load-conversation', (req, res) => {
 
 app.post('/add-to-history', (req, res) => {
     token = req.headers['authorization'];
-    if(token == compute_token){
+    if (token == compute_token) {
         username = req.body.user;
         fullmsg = req.body.msg;
 
@@ -187,21 +330,24 @@ app.post('/add-to-history', (req, res) => {
 
         res.status(200).send("History updated");
     }
-    else{
+    else {
         res.send("Unauthorized");
     }
 
 });
 
 app.post('/delete-history', (req, res) => {
-    if(checkUser(req.session.user)){
+    if (checkUser(req.session.user)) {
+        if (getSetting("chatEnabled")) {
+            addUserdata(req.session.user.username, "history", []);
+            console.log("History deleted");
+            res.status(200).send("History deleted");
+        } else {
+            res.send("Chat is disabled");
+        }
 
-        addUserdata(req.session.user.username, "history", []);
-        console.log("History deleted");
-
-        res.status(200).send("History deleted");
     }
-    else{
+    else {
         res.send("Unauthorized");
     }
 
@@ -209,7 +355,7 @@ app.post('/delete-history', (req, res) => {
 
 app.post('/chat-msg-endpoint', (req, res) => {
     token = req.headers['authorization'];
-    if(token == compute_token){
+    if (token == compute_token) {
         msg = req.body.msg;
         end = req.body.end;
         user = req.body.user;
@@ -217,7 +363,7 @@ app.post('/chat-msg-endpoint', (req, res) => {
         sendChatUpdateToClient(user, msg, end);
         res.status(200).send("Chat message sent");
     }
-    else{
+    else {
         res.send("Unauthorized");
     }
 
@@ -239,11 +385,11 @@ app.get('/sd', (req, res) => {
         lastimg = getUserdata(req.session.user.username, "lastimg")
         if (lastimg == null) {
             lastimg = "images/stable_diffusion_logo.png";
-        }else{
+        } else {
             lastimg = "uploads/" + lastimg;
         }
 
-        res.render("sd.ejs", {username: req.session.user.username, prompt: proprompt, negprompt: negprompt, lastimg: lastimg, instant: getUserdata(req.session.user.username, "instant")});
+        res.render("sd.ejs", { username: req.session.user.username, prompt: proprompt, negprompt: negprompt, lastimg: lastimg, instant: getUserdata(req.session.user.username, "instant") });
     }
     else {
         res.redirect('/');
@@ -259,8 +405,8 @@ app.post('/sd-submit', (req, res) => {
         const model = req.body['model-names'];
         console.log(req.body);
         console.log(prompt, negprompt, user, model);
-        requeststack.push({"function":"generate_img", "arguments": {prompt: prompt, negprompt: negprompt, model: model, user: user}});
-        addUserdata(user, "lastrequest", {prompt: prompt, negprompt: negprompt});
+        requeststack.push({ "function": "generate_img", "arguments": { prompt: prompt, negprompt: negprompt, model: model, user: user } });
+        addUserdata(user, "lastrequest", { prompt: prompt, negprompt: negprompt });
         res.redirect('/sd');
     }
 });
@@ -268,12 +414,12 @@ app.post('/sd-submit', (req, res) => {
 app.get('/compute-endpoint', (req, res) => {
     token = req.headers['authorization'];
     type = req.headers['type'];
-    if(token == compute_token){
-        if(type == "request"){
-            if(requeststack.length == 0){
+    if (token == compute_token) {
+        if (type == "request") {
+            if (requeststack.length == 0) {
                 res.send(null);
             }
-            else{
+            else {
                 prompt = requeststack.pop();
                 res.send(prompt);
             }
@@ -281,19 +427,19 @@ app.get('/compute-endpoint', (req, res) => {
             res.status(400).send('Unsupported type');
         }
     }
-    else{
+    else {
         res.send("Unauthorized");
     }
 
-    });
+});
 
 var nextdel = null;
 
 app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
     const token = req.headers['authorization'];
     const type = req.headers['type'];
-    if(token == compute_token){
-        if(type == "image"){
+    if (token == compute_token) {
+        if (type == "image") {
             user = req.headers['user'];
             try {
                 const image = await Jimp.read(req.file.path);
@@ -301,7 +447,7 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
                 res.status(201).send('Image uploaded and processed successfully')
                 console.log("Image processed");
                 sendImageUpdateToClient(user, req.file.originalname);
-                if(nextdel != null){
+                if (nextdel != null) {
                     fs.unlink(nextdel, (err) => {
                         if (err) {
                             console.error(err);
@@ -309,10 +455,10 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
                         }
                     });
                 };
-                if(req.headers['temp'] === "true"){
+                if (req.headers['temp'] === "true") {
                     nextdel = req.file.path;
                 }
-                else{
+                else {
                     nextdel = null;
                 }
             } catch (error) {
@@ -323,15 +469,15 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
             res.status(400).send('Unsupported type');
         }
     }
-    else{
+    else {
         res.status(401).send("Unauthorized");
     }
 });
-    
+
 
 const SDclients = new Map();
 
-app.get('/sd-events', function(req, res) {
+app.get('/sd-events', function (req, res) {
     const headers = {
         'Content-Type': 'text/event-stream',
         'Connection': 'keep-alive',
@@ -367,44 +513,59 @@ app.post('/instant-prompt', (req, res) => {
         const negprompt = req.body.negprompt;
         const user = req.session.user.username;
         console.log(prompt, negprompt, user);
-        addUserdata(user, "lastrequest", {prompt: prompt, negprompt: negprompt});
-        requeststack.push({"function":"generate_img", "arguments": {prompt: prompt, negprompt: negprompt, model: "sd_xl_turbo_1.0_fp16", user: user}});
+        addUserdata(user, "lastrequest", { prompt: prompt, negprompt: negprompt });
+        requeststack.push({ "function": "generate_img", "arguments": { prompt: prompt, negprompt: negprompt, model: "sd_xl_turbo_1.0_fp16", user: user } });
         res.status(200).send("Prompt set");
     }
 
 });
 
-
-app.post('/setModel', (req, res) => {
-    if (checkUser(req.session.user)) {
-        const model = req.body.option;
-        requeststack.push({"function":"setModel", "arguments": {model: model}});
-        res.status(200).send("Model set");
-    }
-    
-});
-
 app.post('/userDataUpdate', (req, res) => {
     const token = req.headers['authorization'];
-    if(token == compute_token) {
+    if (token == compute_token) {
         global.userdata = req.body;
         console.log("Userdata updated");
         res.status(200).send("Userdata updated");
-    }else{
+    } else {
         res.status(401).send("Unauthorized");
     }
-    
+
+});
+
+app.post('/chat-setModel', (req, res) => {
+    if (checkUser(req.session.user)) {
+        if (checkAdmin(req.session.user.username)) {
+            const model = req.body.model;
+            setSetting("model", model);
+            requeststack.push({ "function": "chatsetModel", "arguments": { model: model } });
+            res.status(200).send("Model set");
+        }
+    }
+
 });
 
 app.post('/sync-keys', (req, res) => {
     const token = req.headers['authorization'];
-    if(token == compute_token) {
+    if (token == compute_token) {
         global.keyfile = req.body;
         global.keysynced = true;
         console.log("Keys synced");
         res.status(200).send("Keys synced");
     }
-    else{
+    else {
+        res.status(401).send("Unauthorized");
+    }
+
+});
+
+app.post('/sync-settings', (req, res) => {
+    const token = req.headers['authorization'];
+    if (token == compute_token) {
+        global.settings = req.body;
+        console.log("Settings synced");
+        res.status(200).send("Settings synced");
+    }
+    else {
         res.status(401).send("Unauthorized");
     }
 
@@ -415,13 +576,13 @@ function addUserdata(user, key, data) {
         global.userdata[user] = {};
     }
     global.userdata[user][key] = data;
-    requeststack.push({"function":"setUserdata", "arguments": {user: user, key: key, value: data}});
+    requeststack.push({ "function": "setUserdata", "arguments": { user: user, key: key, value: data } });
 }
 
 function getUserdata(user, key) {
-    if (global.userdata[user] && global.userdata[user][key]){
+    if (global.userdata[user] && global.userdata[user][key]) {
         return global.userdata[user][key];
-    }else{
+    } else {
         return null;
     }
 }
@@ -435,28 +596,42 @@ function sendImageUpdateToClient(username, imagepath) {
     }
 }
 
-function checkUser(user){
-    if(!user){
+function checkUser(user) {
+    if (!user) {
         return false;
     }
     return validate_password(user.username, user.password);
 }
 
+function setSetting(setting, value) {
+    global.settings[setting] = value;
+    requeststack.push({ "function": "setSetting", "arguments": { setting: setting, value: value } });
+}
+
+function getSetting(setting) {
+    return global.settings[setting];
+}
+
+function checkAdmin(username) {
+    return global.keyfile[username]["admin"] == true;
+}
+
 function validate_password(username, key) {
     if (global.keysynced == true) {
-        if (!global.keyfile[username]) {
+        if (!global.keyfile[username]["password"]) {
             return false;
         }
         else {
-            return keyfile[username] == key;
+            return keyfile[username]["password"] == key;
         }
     } else {
         return false;
     }
 }
 
-requeststack.push({"function":"getKeys", "arguments": "{}"});
-requeststack.push({"function":"updateUserData", "arguments": "{}"});
+requeststack.push({ "function": "getKeys", "arguments": "{}" });
+requeststack.push({ "function": "getSettings", "arguments": "{}" });
+requeststack.push({ "function": "updateUserData", "arguments": "{}" });
 app.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
