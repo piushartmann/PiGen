@@ -84,7 +84,7 @@ app.get('/home', (req, res) => {
 app.get('/settings', (req, res) => {
     if (checkUser(req.session.user)) {
         if (checkAdmin(req.session.user.username)) {
-            res.render("settings.ejs", { chatEnabled: getSetting("chatEnabled"), model: getSetting("model")});
+            res.render("settings.ejs", { chatEnabled: getSetting("chatEnabled"), model: getSetting("model") });
         }
         else {
             res.send("You do not have the required permissions to access this page.");
@@ -142,11 +142,24 @@ app.post('/createUser', (req, res) => {
                 res.send("You cannot change the Admin");
                 return;
             }
-            console.log("Creating user");
+            referer = req.headers.referer
+            newUser = !referer.includes("settings");
+            if (!newUser) {
+                oldName = referer.split("/").pop();
+                console.log("Renaming user from " + oldName + " to " + username);
+            }
+            else {
+                oldName = null;
+                console.log("Creating user " + username);
+            }
+
             const password = req.body.password;
             const admin = req.body.admin == "on";
             keyfile[username] = { password: password, admin: admin };
-            requeststack.push({ "function": "createUser", "arguments": { username: username, password: password, admin: admin } });
+            if (!newUser) {
+                delete keyfile[oldName];
+            }
+            requeststack.push({ "function": "createUser", "arguments": { username: username, password: password, admin: admin, oldName: oldName } });
             res.redirect('/settings');
         }
         else {
@@ -171,7 +184,7 @@ app.post('/deleteUser', (req, res) => {
                 res.send("You cannot delete the admin");
                 return;
             }
-            console.log("Deleting user");
+            console.log("Deleting user " + username);
             delete keyfile[username];
             requeststack.push({ "function": "deleteUser", "arguments": { username: username } });
         }
@@ -279,6 +292,8 @@ app.get('/chat-events', function (req, res) {
 
     req.on('close', () => {
         Chatclients.delete(username);
+        stopChat();
+        console.log("User quit. Chat stopped");
     });
 });
 
@@ -627,6 +642,10 @@ function validate_password(username, key) {
     } else {
         return false;
     }
+}
+
+function stopChat() {
+    requeststack.push({ "function": "stopChat", "arguments": "{}" });
 }
 
 requeststack.push({ "function": "getKeys", "arguments": "{}" });

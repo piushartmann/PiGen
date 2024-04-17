@@ -7,6 +7,8 @@ window.MathJax = {
     }
 };
 
+global = {};
+
 function sendMessage() {
     var message = document.getElementById("messageInput").value;
 
@@ -69,6 +71,7 @@ function makeNewMessage(message, user) {
     var newDIV = document.createElement("div");
     var newMessage = document.createElement("p");
     var newImage = document.createElement("img");
+
     isBot = user == "bot"
     isSystem = user == "system"
     if (isSystem) {
@@ -86,6 +89,10 @@ function makeNewMessage(message, user) {
 
     if (isBot) {
         newMessage.innerHTML = marked.parse(message);
+        newImage.onclick = function () {
+            const message = newImage.parentElement
+            MessageOptions(message);
+        };
     }
     else {
         newMessage.textContent = message;
@@ -96,6 +103,38 @@ function makeNewMessage(message, user) {
     newDIV.insertBefore(newImage, newMessage);
     updateScroll(isScrolledToBottom);
     return [newMessage, newDIV];
+}
+
+function MessageOptions(message) {
+    lastSelected = global.lastSelected
+    if (message.classList.contains("blurBox")) {
+        remove(message);
+    }
+    else {
+        if (lastSelected != null && lastSelected) {
+            remove(lastSelected);
+        }
+        add(message);
+    }
+    function remove(message) {
+        message.classList.remove("blurBox");
+        message.removeChild(removeButton);
+        message.removeChild(regenerateButton);
+        global.lastSelected = null;
+    }
+    function add(message) {
+        message.classList.add("blurBox");
+        removeButton = document.createElement("button");
+        regenerateButton = document.createElement("button");
+
+        regenerateButton.className = "regenerateButton";
+        removeButton.className = "removeButton";
+        regenerateButton.textContent = "Regenerate";
+        removeButton.textContent = "Delete";
+        message.appendChild(removeButton);
+        message.appendChild(regenerateButton);
+        global.lastSelected = message;
+    }
 }
 
 function updateScroll(isScrolledToBottom) {
