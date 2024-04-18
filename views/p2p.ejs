@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>P2P Chat</title>
+        <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+        <script type="text/javascript" src="js/p2p.js"></script>
+        <link rel="stylesheet" href="css/p2p.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content"/>
+
+    </head>
+        
+    <body>
+        <h1 id="title">P2P Chat</h1>
+        
+        <form id="codeForm" action="join()">
+            <h1 id="code"></h1>
+            <input type="text" id="codeInput" oninput="formatInput(this)" placeholder="XXXX-XXXX" pattern="^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$" style="text-transform: uppercase;">
+            <button type="submit">Join</button>
+        </form>
+
+        <div class="userInput" id="userInput">
+            <input class="messageInput" type="text" id="messageInput" placeholder="Type your message..."
+                onkeydown="handleKeyDown(event)" autofocus>
+                
+            <button id="sendButton" class="sendButton" onclick="sendButtonClicked()">
+                <img src="/icons/paper-plane-solid.svg" alt="Icon">
+            </button>
+        </div>
+
+        <div class="chat-window" id="chatWindow">
+
+        </div>
+
+    </body>
+</html>

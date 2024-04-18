@@ -6,6 +6,8 @@ const multer = require('multer');
 const Jimp = require('jimp');
 const e = require('express');
 const { get } = require('http');
+const { ExpressPeerServer } = require("peer");
+const { send } = require('process');
 const app = express();
 
 var storage = multer.diskStorage({
@@ -35,6 +37,7 @@ keyfile = null;
 keysynced = false;
 userdata = {};
 settings = {};
+p2pclientsWaiting = [];
 
 console.log("Starting");
 
@@ -227,6 +230,16 @@ app.post('/set-chat', (req, res) => {
     }
 });
 
+app.get('/p2p', (req, res) => {
+    if (checkUser(req.session.user)) {
+        res.render("p2p.ejs", {});
+    }
+    else {
+        res.redirect('/');
+    }
+});
+
+
 app.get('/chat', (req, res) => {
     if (checkUser(req.session.user)) {
         if (getSetting("chatEnabled")) {
@@ -293,7 +306,6 @@ app.get('/chat-events', function (req, res) {
     req.on('close', () => {
         Chatclients.delete(username);
         stopChat();
-        console.log("User quit. Chat stopped");
     });
 });
 
@@ -307,7 +319,7 @@ app.post('/stop-chat', (req, res) => {
 });
 
 app.post('/edit-message', (req, res) => {
-    if(checkUser(req.session.user)) {
+    if (checkUser(req.session.user)) {
         if (getSetting("chatEnabled")) {
             user = req.session.user.username;
             index = req.body.index;
@@ -730,6 +742,13 @@ function stopChat() {
 requeststack.push({ "function": "getKeys", "arguments": "{}" });
 requeststack.push({ "function": "getSettings", "arguments": "{}" });
 requeststack.push({ "function": "updateUserData", "arguments": "{}" });
-app.listen(3000, () => {
+server = app.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
+
+const peerServer = ExpressPeerServer(server, {
+    path: "/p2pserver",
+});
+app.use("/peerjs", peerServer);
+
+//peerServer.on('connection', (client) => { newp2pClient(client); });
