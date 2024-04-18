@@ -6,7 +6,7 @@
     --text-color: black;
     --box-shadow-color: #888888;
 
-    --num-tiles: 3;
+    --num-tiles: 4;
     --size-tiles: 400px;
 }
 
@@ -29,8 +29,6 @@ body {
     grid-gap: 0px calc(calc(100% - calc(var(--size-tiles)*var(--num-tiles)))/var(--num-tiles));
     justify-content: center;
 }
-
-
 
 
 .grid-item {
@@ -124,6 +122,10 @@ body {
         height: 10%;
         margin: 0%;
         padding: 10px;
+    }
+
+    .grid-item{
+        box-shadow: none;
     }
 
 }
