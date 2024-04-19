@@ -8,7 +8,7 @@ const id = generateString(8);
 document.addEventListener("DOMContentLoaded", () => {
 
     peer = new Peer(id, {
-        host: "https://superladens.onrender.com",
+        host: "superladens.onrender.com",
         port: 3000,
         path: "/peerjs/p2pserver",
         debug: 3,
@@ -24,6 +24,11 @@ document.addEventListener("DOMContentLoaded", () => {
         join(document.getElementById("codeInput").value);
     };
 });
+
+console.log=function(){
+    var l=$("#debug");
+    l.html(l.html()+arguments[0]+' '+(arguments[1]?arguments[1]:'')+'<br>');
+};
 
 
 function generateString(length) {

@@ -759,8 +759,9 @@ server = server.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
 
+
 const peerServer = ExpressPeerServer(server, {
-    path: "/p2pserver",
+    path: "/p2pserver"
 });
 app.use("/peerjs", peerServer);
 
