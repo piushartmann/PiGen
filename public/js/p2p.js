@@ -10,7 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
     peer = new Peer(id, {
         host: "https://superladens.onrender.com",
         port: 3000,
-        path: "/peerjs/p2pserver"
+        path: "/peerjs/p2pserver",
+        debug: 3,
+        secure: true
     });
     code = document.getElementById("code");
     code.innerHTML = id
