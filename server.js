@@ -746,8 +746,13 @@ server = app.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
 
+
 const peerServer = ExpressPeerServer(server, {
     path: "/p2pserver",
+    ssl: {
+		key: fs.readFileSync("/etc/apache2/ssl/apache.key"),
+		cert: fs.readFileSync("/etc/apache2/ssl/apache.crt"),
+	},
 });
 app.use("/peerjs", peerServer);
 
