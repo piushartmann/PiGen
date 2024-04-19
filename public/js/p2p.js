@@ -23,6 +23,11 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 });
 
+console.log=function(){
+    var l=$("#debug");
+    l.html(l.html()+arguments[0]+' '+(arguments[1]?arguments[1]:'')+'<br>');
+};
+
 
 function generateString(length) {
     let result = '';
