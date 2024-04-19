@@ -748,11 +748,7 @@ server = app.listen(3000, () => {
 
 
 const peerServer = ExpressPeerServer(server, {
-    path: "/p2pserver",
-    ssl: {
-		key: fs.readFileSync("/etc/apache2/ssl/apache.key"),
-		cert: fs.readFileSync("/etc/apache2/ssl/apache.crt"),
-	},
+    path: "/p2pserver"
 });
 app.use("/peerjs", peerServer);
 
