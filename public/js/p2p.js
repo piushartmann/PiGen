@@ -8,7 +8,7 @@ const id = generateString(8);
 document.addEventListener("DOMContentLoaded", () => {
 
     peer = new Peer(id, {
-        host: "https://superladens.onrender.com",
+        host: "superladens.onrender.com",
         port: 3000,
         path: "/peerjs/p2pserver"
     });
