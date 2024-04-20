@@ -14,7 +14,6 @@ document.addEventListener("DOMContentLoaded", () => {
         port: 3000,
         path: "/p2pserver",
         debug: 3,
-        secure: false,
     });
     setEvents();
 
