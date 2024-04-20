@@ -756,13 +756,12 @@ var options = {
     debug: true,
     allow_discovery: true,
 	path: "/p2pserver",
-    ssl: {},
     proxied: true,
 }
 
 const peerServer = ExpressPeerServer(server, options);
 
-app.use("/peerjs", peerServer);
+app.use(peerServer);
 
 
 server.listen(3000, () => {
