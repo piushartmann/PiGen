@@ -45,7 +45,7 @@ const compute_token = "testtoken";
 
 app.get('/', (req, res) => {
     if (checkUser(req.session.user)) {
-        res.redirect('/home');
+        res.render("home.ejs", { username: req.session.user.username, admin: checkAdmin(req.session.user.username) });
         return;
     }
     else {
@@ -61,7 +61,7 @@ app.post('/login', (req, res) => {
 
     if (validate_password(user, password)) {
         req.session.user = { username: user, password: password };
-        res.redirect('/home');
+        res.redirect('/');
     }
     else {
         res.redirect('/');
@@ -71,16 +71,6 @@ app.post('/login', (req, res) => {
 app.post('/logout', (req, res) => {
     req.session.user = null;
     res.redirect('/');
-});
-
-app.get('/home', (req, res) => {
-    if (checkUser(req.session.user)) {
-        res.render("home.ejs", { username: req.session.user.username, admin: checkAdmin(req.session.user.username) });
-    }
-    else {
-        res.redirect('/');
-    }
-
 });
 
 app.get('/settings', (req, res) => {
@@ -688,6 +678,10 @@ app.post('/init', (req, res) => {
     else {
         res.status(401).send("Unauthorized");
     }
+});
+
+app.get('/healthCheck', (req, res) => {
+    res.status(200).send("OK");
 });
 
 function sendChatUpdateToClient(username, msg, end) {
