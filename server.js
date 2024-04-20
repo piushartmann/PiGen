@@ -761,7 +761,7 @@ const peerServerOptions = {
 };
 
 const peerServer = ExpressPeerServer(server, peerServerOptions);
-app.use('/p2pserver', peerServer);
+app.use(peerServer);
 
 
 server.listen(3000, () => {
