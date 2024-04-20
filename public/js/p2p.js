@@ -9,7 +9,7 @@ connectedToHost = false;
 document.addEventListener("DOMContentLoaded", () => {
     id = generateString(8);
 
-    if (debug) {
+    if (debug == "true") {
         peer = new Peer(id, {
             host: "/",
             port: 3000,
