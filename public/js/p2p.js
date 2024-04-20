@@ -185,16 +185,15 @@ function getNameFromPeer(peer) {
 }
 
 function listAllPeers() {
-    var table = document.getElementById("peerTable");
-    tempTable = document.createElement("table");
     peer.listAllPeers((peers) => {
+        var table = document.getElementById("peerTable");
         peers.forEach(peer => {
             peerusername = getNameFromPeer(peer);
             if (peerusername == username) {
                 return;
             }
-            tempTable.innerHTML = tablebegin;
-            var row = tempTable.insertRow(-1);
+            table.innerHTML = tablebegin;
+            var row = table.insertRow(-1);
             cell1 = row.insertCell(0);
             cell2 = row.insertCell(1);
 
@@ -205,14 +204,11 @@ function listAllPeers() {
             button.id = "joinButton_"+peerusername;
             cell2.appendChild(button);
 
-            table.innerHTML = tempTable.innerHTML;
-
             button = document.getElementById("joinButton_"+peerusername);
 
             button.onclick = function () {
                 join(peer);
                 initializer = true;
-                console.log("Joining: " + peer);
             }
 
         })
