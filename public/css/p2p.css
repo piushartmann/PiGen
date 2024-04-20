@@ -73,9 +73,35 @@ body{
     color: blue
 }
 
+table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+
+/* table with two attributes possible infinite rows*/
+#peerTable {
+    width: 50%;
+}
+
+.joinButton {
+    width: 100%;
+    background-color: lightgray;
+    border: none;
+    margin: 0px;
+}
+
+.joinButton:hover {
+    background-color: #f1f1f1;
+}
+
+
 @media (max-width: 768px) {
     .messageInput {
         width: 60%;
         margin-left: 5%;
+    }
+
+    #peerTable {
+        width: 100%;
     }
 }

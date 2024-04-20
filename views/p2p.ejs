@@ -11,12 +11,6 @@
         
     <body>
         <h1 id="title">P2P Chat</h1>
-        
-        <form id="codeForm" action="join()">
-            <h1 id="code"></h1>
-            <input type="text" id="codeInput" oninput="formatInput(this)" placeholder="XXXX-XXXX" pattern="^[A-Za-z0-9]{4}-[A-Za-z0-9]{4}$" style="text-transform: uppercase;">
-            <button type="submit">Join</button>
-        </form>
 
         <div class="userInput" id="userInput">
             <input class="messageInput" type="text" id="messageInput" placeholder="Type your message..."
@@ -27,11 +21,20 @@
             </button>
         </div>
 
+        <table id="peerTable">
+            <tr>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </table>
+
         <div class="chat-window" id="chatWindow">
 
         </div>
 
-        <div id="debug"></div>
-
     </body>
+    <script>
+        username = "<%= username %>";
+    </script>
 </html>
+

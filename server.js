@@ -4,9 +4,7 @@ const fs = require('fs');
 const session = require('cookie-session')
 const multer = require('multer');
 const Jimp = require('jimp');
-const e = require('express');
 const { ExpressPeerServer } = require("peer");
-const { send } = require('process');
 const app = express();
 
 var storage = multer.diskStorage({
@@ -37,9 +35,6 @@ keysynced = false;
 userdata = {};
 settings = {};
 p2pclientsWaiting = [];
-
-const sslcert = fs.readFileSync(path.join(__dirname, '/ssl/cert.pem'));
-const sslkey = fs.readFileSync(path.join(__dirname, '/ssl/key.pem'));
 
 console.log("Starting");
 
@@ -234,7 +229,16 @@ app.post('/set-chat', (req, res) => {
 
 app.get('/p2p', (req, res) => {
     if (checkUser(req.session.user)) {
-        res.render("p2p.ejs", {});
+        res.render("p2p.ejs", {username: req.session.user.username});
+    }
+    else {
+        res.redirect('/');
+    }
+});
+
+app.get('/getUserName', (req, res) => {
+    if (checkUser(req.session.user)) {
+        res.send({username: req.session.user.username});
     }
     else {
         res.redirect('/');
@@ -745,24 +749,6 @@ requeststack.push({ "function": "getKeys", "arguments": "{}" });
 requeststack.push({ "function": "getSettings", "arguments": "{}" });
 requeststack.push({ "function": "updateUserData", "arguments": "{}" });
 
-const options = {
-    key: sslkey,
-    cert: sslcert,
-    passphrase: "superladens",
-  };
-
-const https = require('https');
-
-var server = https.createServer(options, app);
-
-server = server.listen(3000, () => {
+server = app.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
-
-
-const peerServer = ExpressPeerServer(server, {
-    path: "/p2pserver"
-});
-app.use("/peerjs", peerServer);
-
-//peerServer.on('connection', (client) => { newp2pClient(client); });
