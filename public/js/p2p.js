@@ -11,8 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     peer = new Peer(id, {
         host: "/",
-        port: 3000,
+        port: 443,
         path: "/p2pserver",
+        secure: true,
         debug: 3,
     });
     setEvents();

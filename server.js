@@ -6,6 +6,7 @@ const multer = require('multer');
 const Jimp = require('jimp');
 const ExpressPeerServer = require("peer").ExpressPeerServer;
 const http = require("http");
+
 const app = express();
 
 var storage = multer.diskStorage({
@@ -752,16 +753,15 @@ requeststack.push({ "function": "updateUserData", "arguments": "{}" });
 
 const server = http.createServer(app);
 
-var options = {
+const peerServerOptions = {
     debug: true,
     allow_discovery: true,
-	path: "/p2pserver",
-    proxied: true,
-}
+    path: '/p2pserver',
+    proxied: true
+};
 
-const peerServer = ExpressPeerServer(server, options);
-
-app.use(peerServer);
+const peerServer = ExpressPeerServer(server, peerServerOptions);
+app.use('/p2pserver', peerServer);
 
 
 server.listen(3000, () => {
