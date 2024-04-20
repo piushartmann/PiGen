@@ -762,7 +762,7 @@ var options = {
 
 const peerServer = ExpressPeerServer(server, options);
 
-app.use("peerjs", peerServer);
+app.use("/peerjs", peerServer);
 
 
 server.listen(3000, () => {
