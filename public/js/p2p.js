@@ -10,9 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
     id = generateString(8);
 
     peer = new Peer(id, {
-        host: "159.89.98.173",
-        port: 9000,
-        path: "/p2p",
+        host: "/",
+        port: 3000,
+        path: "/p2pserver",
         debug: 3
     });
     setEvents();
@@ -172,35 +172,28 @@ function getNameFromPeer(peer) {
 }
 
 function listAllPeers() {
-    fetch('http://159.89.98.173:9000/p2p/peerjs/peers', {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json'
+    table = document.getElementById("peerTable");
+    table.innerHTML = tablebegin;
+    peer.listAllPeers((peers) => {peers.forEach(peer => {
+        peerusername = getNameFromPeer(peer);
+        if (peerusername == username) {
+            return;
         }
-    }).then(response => response.json())
-        .then(peers => {
-            table = document.getElementById("peerTable");
-            table.innerHTML = tablebegin;
-            peers.forEach(peer => {
-                peerusername = getNameFromPeer(peer);
-                if (peerusername == username) {
-                    return;
-                }
-                var row = table.insertRow(-1);
-                cell1 = row.insertCell(0);
-                cell2 = row.insertCell(1);
+        var row = table.insertRow(-1);
+        cell1 = row.insertCell(0);
+        cell2 = row.insertCell(1);
 
-                cell1.innerHTML = peerusername;
-                button = document.createElement("button");
-                button.className = "joinButton";
-                button.innerHTML = "Join";
-                button.onclick = function () {
-                    join(peer);
-                    initializer = true;
-                    console.log("Joining: " + peer);
-                }
+        cell1.innerHTML = peerusername;
+        button = document.createElement("button");
+        button.className = "joinButton";
+        button.innerHTML = "Join";
+        button.onclick = function () {
+            join(peer);
+            initializer = true;
+            console.log("Joining: " + peer);
+        }
 
-                cell2.appendChild(button);
-            });
-        })
+        cell2.appendChild(button);
+    })});
+    
 }

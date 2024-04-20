@@ -4,7 +4,8 @@ const fs = require('fs');
 const session = require('cookie-session')
 const multer = require('multer');
 const Jimp = require('jimp');
-const { ExpressPeerServer } = require("peer");
+const ExpressPeerServer = require("peer").ExpressPeerServer;
+const http = require("http");
 const app = express();
 
 var storage = multer.diskStorage({
@@ -749,6 +750,21 @@ requeststack.push({ "function": "getKeys", "arguments": "{}" });
 requeststack.push({ "function": "getSettings", "arguments": "{}" });
 requeststack.push({ "function": "updateUserData", "arguments": "{}" });
 
-server = app.listen(3000, () => {
+const server = http.createServer(app);
+
+var options = {
+    debug: true,
+    allow_discovery: true,
+	path: "/p2pserver",
+    ssl: {},
+    proxied: true,
+}
+
+const peerServer = ExpressPeerServer(server, options);
+
+app.use(peerServer);
+
+
+server.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
