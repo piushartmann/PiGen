@@ -231,7 +231,7 @@ app.post('/set-chat', (req, res) => {
 
 app.get('/p2p', (req, res) => {
     if (checkUser(req.session.user)) {
-        res.render("p2p.ejs", {username: req.session.user.username});
+        res.render("p2p.ejs", {username: req.session.user.username, debug: global.debug});
     }
     else {
         res.redirect('/');
@@ -677,6 +677,19 @@ app.post('/sync-settings', (req, res) => {
 
 });
 
+app.post('/init', (req, res) => {
+    const token = req.headers['authorization'];
+    if (token == compute_token) {
+        global.debug = req.body.debug;
+        console.log("Initialized");
+        console.log(global.debug);
+        res.status(200).send("Initialized");
+    }
+    else {
+        res.status(401).send("Unauthorized");
+    }
+});
+
 function sendChatUpdateToClient(username, msg, end) {
     const client = Chatclients.get(username);
     if (client) {
@@ -750,14 +763,14 @@ function stopChat() {
 requeststack.push({ "function": "getKeys", "arguments": "{}" });
 requeststack.push({ "function": "getSettings", "arguments": "{}" });
 requeststack.push({ "function": "updateUserData", "arguments": "{}" });
+requeststack.push({ "function": "init", "arguments": "{}" });
 
 const server = http.createServer(app);
 
 const peerServerOptions = {
-    debug: true,
     allow_discovery: true,
     path: '/p2pserver',
-    proxied: true
+    proxied: true,
 };
 
 const peerServer = ExpressPeerServer(server, peerServerOptions);
