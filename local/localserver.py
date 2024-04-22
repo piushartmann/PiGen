@@ -204,7 +204,13 @@ def main():
             headers = {"authorization":compute_token, "type":"request"}
             r = requests.get(url+"/compute-endpoint", headers=headers)
             if r.text != "":
-                data = json.loads(r.text)
+                try: 
+                    data = json.loads(r.text)
+                except json.decoder.JSONDecodeError as e:
+                    print("Error decoding JSON")
+                    print(e)
+                    print(r.text)
+                    continue
                 process = threading.Thread(target=process_data, args=(data,))
                 process.start()
             else:
