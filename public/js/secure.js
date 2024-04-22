@@ -124,7 +124,7 @@ class p2pMode {
         this.connectedToHost = false;
 
         if (debug == "true") {
-            this.peer = new Peer(id, {
+            this.peer = new Peer(this.id, {
                 host: "/",
                 port: 3000,
                 path: "/p2pserver",
@@ -133,7 +133,7 @@ class p2pMode {
             });
         }
         else {
-            this.peer = new Peer(id, {
+            this.peer = new Peer(this.id, {
                 host: "/",
                 port: 443,
                 path: "/p2pserver",
