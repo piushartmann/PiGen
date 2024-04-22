@@ -16,7 +16,7 @@ function sendButtonClicked() {
         if (global.editing) {
             sendEditedMessage(global.lastSelected);
         }
-        else{
+        else {
             sendMessage();
         }
     }
@@ -187,7 +187,7 @@ function MessageOptions(message) {
             regenerateButton.onclick = function () { regenerateMessage(message) };
             blurbox.appendChild(regenerateButton);
         }
-        else{
+        else {
             editButton = document.createElement("button");
             editButton.classList = ["editButton button"];
             editButton.textContent = "Edit";
@@ -301,7 +301,7 @@ function handleKeyDown(event) {
             if (global.editing) {
                 sendEditedMessage(global.lastSelected);
             }
-            else{
+            else {
                 sendMessage();
             }
         }

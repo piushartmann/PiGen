@@ -6,8 +6,12 @@ const multer = require('multer');
 const Jimp = require('jimp');
 const ExpressPeerServer = require("peer").ExpressPeerServer;
 const http = require("http");
+const cors = require('cors');
+const { stringify } = require('querystring');
 
 const app = express();
+
+app.use(cors());
 
 var storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -221,7 +225,7 @@ app.post('/set-chat', (req, res) => {
 
 app.get('/p2p', (req, res) => {
     if (checkUser(req.session.user)) {
-        res.render("p2p.ejs", {username: req.session.user.username, debug: global.debug});
+        res.render("p2p.ejs", { username: req.session.user.username, debug: global.debug });
     }
     else {
         res.redirect('/');
@@ -230,7 +234,7 @@ app.get('/p2p', (req, res) => {
 
 app.get('/getUserName', (req, res) => {
     if (checkUser(req.session.user)) {
-        res.send({username: req.session.user.username});
+        res.send({ username: req.session.user.username });
     }
     else {
         res.redirect('/');
@@ -640,6 +644,14 @@ app.post('/chat-setModel', (req, res) => {
 
 });
 
+app.get('/chat-getModel', (req, res) => {
+    if (checkUser(req.session.user)) {
+        res.send({model: getSetting("model")});
+    }
+});
+
+
+
 app.post('/sync-keys', (req, res) => {
     const token = req.headers['authorization'];
     if (token == compute_token) {
@@ -682,6 +694,26 @@ app.post('/init', (req, res) => {
 
 app.get('/healthCheck', (req, res) => {
     res.status(200).send("OK");
+});
+
+async function getGif(tag) {
+    const response = await fetch(`https://api.giphy.com/v1/gifs/random?api_key=YvA91J6U5kt2iQgoNtIyVEiJ6T97iyQ7&tag=${tag}&rating=g`, {
+        method: 'GET'
+    })
+    if (!response.ok) {
+        console.log(response.statusText);
+        return response;
+    }
+    const data = await response.json();
+    return data.data.embed_url;
+}
+
+app.get('/gif/:tag', (req, res) => {
+    getGif(req.params.tag)
+    .then((data) => {
+        res.send(data);
+    })
+    
 });
 
 function sendChatUpdateToClient(username, msg, end) {

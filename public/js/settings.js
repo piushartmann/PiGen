@@ -1,4 +1,17 @@
 document.addEventListener('DOMContentLoaded', (event) => {
+    const chatModel = document.getElementById('selectmodel');
+    fetch('/chat-getModel', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }).then(response => response.json())
+        .then(data => {
+            console.log(data);
+            model = data.model;
+            chatModel.value = model;
+        })
+
     fetch('/getUser', {
         method: 'GET',
         headers: {
@@ -45,7 +58,6 @@ document.addEventListener('DOMContentLoaded', (event) => {
     });
 
     chatEnabledCheckbox.checked = chatEnabled === 'true';
-    const chatModel = document.getElementById('selectmodel');
     chatModel.value = model;
 
     chatModel.onchange = function () {
