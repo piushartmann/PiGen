@@ -63,31 +63,43 @@ app.post('/login', (req, res) => {
     const user = req.body.username;
     const password = req.body.password;
 
-    if (validate_password(user, password)) {
+    validation = validate_password(user, password);
+    if (isStringObject(validation)) {
+        res.send(validation);
+        return;
+    }
+
+    if (validation) {
         req.session.user = { username: user, password: password };
         res.redirect('/');
+        return;
     }
     else {
         res.redirect('/');
+        return;
     }
 });
 
 app.post('/logout', (req, res) => {
     req.session.user = null;
     res.redirect('/');
+    return;
 });
 
 app.get('/settings', (req, res) => {
     if (checkUser(req.session.user)) {
         if (checkAdmin(req.session.user.username)) {
             res.render("settings.ejs", { chatEnabled: getSetting("chatEnabled"), model: getSetting("model") });
+            return;
         }
         else {
             res.send("You do not have the required permissions to access this page.");
+            return;
         }
     }
     else {
         res.redirect('/');
+        return;
     }
 
 });
@@ -770,12 +782,17 @@ function checkAdmin(username) {
 }
 
 function validate_password(username, key) {
-    if (global.keysynced == true) {
-        if (!global.keyfile[username]["password"]) {
-            return false;
+    if (global.keysynced) {
+        if (global.keyfile[username]) {
+            if (!global.keyfile[username]["password"]) {
+                return "Your Password is Wrong.";
+            }
+            else {
+                return keyfile[username]["password"] == key;
+            }
         }
         else {
-            return keyfile[username]["password"] == key;
+            return "This User does not exist.";
         }
     } else {
         return false;
@@ -803,6 +820,8 @@ const peerServer = ExpressPeerServer(server, peerServerOptions);
 app.use(peerServer);
 
 const { Server } = require("socket.io");
+const e = require('express');
+const { isStringObject } = require('util/types');
 const io = new Server(server);
 
 

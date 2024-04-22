@@ -1,12 +1,9 @@
 var compatibility = false;
 var mode = null;
-const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
 
 document.addEventListener("DOMContentLoaded", () => {
-    id = generateString(8);
-
-    const p2p = new p2pMode(id);
-    const comp = new compabilityMode(id);
+    const p2p = new p2pMode();
+    const comp = new compabilityMode();
 
     const checkbox = document.getElementById("compatibility");
     mode = compatibility ? comp : p2p;
@@ -22,16 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
         mode.listAllPeers();
     }, 1000);
 });
-
-
-function generateString(length) {
-    let result = username + "-";
-    const charactersLength = characters.length;
-    for (let i = 0; i < length; i++) {
-        result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    }
-    return result
-}
 
 function handleKeyDown(keyevent) {
     if (keyevent.key === "Enter") {
@@ -128,10 +115,10 @@ function sendButtonClicked() {
 
 class p2pMode {
 
-    constructor(id) {
+    constructor() {
         this.peer = null;
         this.conn = null;
-        this.id = id;
+        this.id = this.generateId(8);
         this.initializer = false;
         this.connected = false;
         this.connectedToHost = false;
@@ -154,6 +141,16 @@ class p2pMode {
             });
         }
         this.setEvents();
+    }
+
+    generateId(length) {
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = username + "-";
+        const charactersLength = characters.length;
+        for (let i = 0; i < length; i++) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+        return result
     }
 
     setEvents() {
