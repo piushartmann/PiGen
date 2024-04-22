@@ -1,15 +1,17 @@
-var compatibility = false;
+var socketMode = false;
 var mode = null;
 
 document.addEventListener("DOMContentLoaded", () => {
     const p2p = new p2pMode();
-    const comp = new compabilityMode();
+    const socket = new socketMode();
 
-    const checkbox = document.getElementById("compatibility");
-    mode = compatibility ? comp : p2p;
+    const checkbox = document.getElementById("modeSelector");
+    mode = socketMode ? socket : p2p;
     checkbox.addEventListener("change", function () {
-        compatibility = checkbox.checked == true;
-        mode = compatibility ? comp : p2p;
+        socketMode = checkbox.checked == true;
+        mode = socketMode ? socket : p2p;
+        resetTable();
+        mode.listAllPeers();
     });
 
     table = document.getElementById("peerTable");
@@ -82,6 +84,12 @@ function makeRow(username, table) {
     return button;
 }
 
+function resetTable() {
+    var table = document.getElementById("peerTable");
+    table.innerHTML = tablebegin;
+    return table;
+}
+
 function setChatInputs(show) {
     //show
     const userInput = document.getElementById("userInput");
@@ -92,8 +100,8 @@ function setChatInputs(show) {
     title.style.display = show ? "none" : "block";
     const table = document.getElementById("peerTable");
     table.style.display = show ? "none" : "block";
-    const compatibility = document.getElementById("compatibility");
-    compatibility.style.display = show ? "none" : "block";
+    const modeSelector = document.getElementById("modeSelector");
+    modeSelector.style.display = show ? "none" : "block";
 }
 
 function formatInput(input) {
@@ -211,7 +219,7 @@ class p2pMode {
 
     listAllPeers() {
         this.peer.listAllPeers((peers) => {
-            var table = document.getElementById("peerTable");
+            var table = resetTable();
             peers.forEach(peer => {
                 var peerusername = this.getNameFromPeer(peer);
                 if (peerusername == username) {
@@ -231,15 +239,19 @@ class p2pMode {
     }
 }
 
-class compabilityMode {
+class socketMode {
 
-    constructor(id) {
-        var socket = io();
-        socket.emit('chat message', "Hello World");
+    constructor() {
+        this.socket = io();
+        this.test();
+    }
 
-        socket.on('chat message', function (msg) {
+    test() {
+        this.socket.emit('chat message', "Hello World");
+
+        this.socket.on('chat message', function (msg) {
             console.log(msg);
-            //addMessageToChat(msg, false);
+            addMessageToChat(msg, false);
         });
     }
 
