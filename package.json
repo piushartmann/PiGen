@@ -9,6 +9,7 @@
     "peer": "^1.0.2",
     "pug": "^3.0.2",
     "sharp": "^0.33.2",
+    "socket.io": "^4.7.5",
     "xmlhttprequest": "^1.8.0"
   }
 }

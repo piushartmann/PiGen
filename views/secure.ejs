@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>P2P Chat</title>
+        <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script type="text/javascript" src="js/secure.js"></script>
+        <link rel="stylesheet" href="css/secure.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content"/>
+
+    </head>
+        
+    <body>
+        <h1 id="title">Secure Chat</h1>
+
+        <div class="userInput" id="userInput">
+            <input class="messageInput" type="text" id="messageInput" placeholder="Type your message..."
+                onkeydown="handleKeyDown(event)" autofocus>
+                
+            <button id="sendButton" class="sendButton" onclick="sendButtonClicked()">
+                <img src="/icons/paper-plane-solid.svg" alt="Icon">
+            </button>
+        </div>
+
+        <label for="compatibility">Enable Test mode (unstable)</label>
+        <input type="checkbox" id="compatibility" name="compatibility">
+
+        <table id="peerTable">
+            <tr>
+                <th>Name</th>
+                <th>Actions</th>
+            </tr>
+        </table>
+
+        <div class="chat-window" id="chatWindow">
+
+        </div>
+
+    </body>
+    <script>
+        username = "<%= username %>";
+        debug = "<%= mydebug %>";
+    </script>
+</html>
+

@@ -223,9 +223,9 @@ app.post('/set-chat', (req, res) => {
     }
 });
 
-app.get('/p2p', (req, res) => {
+app.get('/secure', (req, res) => {
     if (checkUser(req.session.user)) {
-        res.render("p2p.ejs", { username: req.session.user.username, debug: global.debug });
+        res.render("secure.ejs", { username: req.session.user.username, mydebug: global.debug });
     }
     else {
         res.redirect('/');
@@ -646,7 +646,7 @@ app.post('/chat-setModel', (req, res) => {
 
 app.get('/chat-getModel', (req, res) => {
     if (checkUser(req.session.user)) {
-        res.send({model: getSetting("model")});
+        res.send({ model: getSetting("model") });
     }
 });
 
@@ -710,10 +710,10 @@ async function getGif(tag) {
 
 app.get('/gif/:tag', (req, res) => {
     getGif(req.params.tag)
-    .then((data) => {
-        res.send(data);
-    })
-    
+        .then((data) => {
+            res.send(data);
+        })
+
 });
 
 function sendChatUpdateToClient(username, msg, end) {
@@ -802,7 +802,26 @@ const peerServerOptions = {
 const peerServer = ExpressPeerServer(server, peerServerOptions);
 app.use(peerServer);
 
+const { Server } = require("socket.io");
+const io = new Server(server);
+
 
 server.listen(3000, () => {
     console.log('Server is running on port 3000');
+});
+
+io.on('connection', (socket) => {
+    const cookies = socket.handshake.headers.cookie;
+
+    console.log('a user connected');
+    socket.on('disconnect', () => {
+        console.log('user disconnected');
+    });
+});
+
+io.on('connection', (socket) => {
+    socket.on('chat message', (msg) => {
+        console.log('message: ' + msg);
+        socket.emit('chat message', "Hello World back");
+    });
 });
