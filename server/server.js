@@ -43,10 +43,12 @@ userdata = {};
 settings = {};
 p2pclientsWaiting = [];
 
-console.log("Starting");
-
 var requeststack = [];
-const compute_token = "testtoken";
+
+const compute_token = process.env.COMPUTE_TOKEN;
+
+
+console.log("Starting");
 
 app.get('/', (req, res) => {
     if (checkUser(req.session.user)) {

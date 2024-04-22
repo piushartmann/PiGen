@@ -5,6 +5,7 @@ import base64
 import threading
 import signal
 import sys
+import os
 
 import stableAPI as sd
 import ollamaAPI
@@ -19,8 +20,7 @@ if debug:
 else:
     url = "https://superladens.onrender.com"
 
-
-compute_token = "testtoken"
+compute_token = os.environ["COMPUTE_TOKEN"]
 
 lla = ollamaAPI.API(url, compute_token)
 
