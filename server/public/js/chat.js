@@ -1,4 +1,12 @@
+window.mathjax_loaded = false
 window.MathJax = {
+    startup: {
+        pageReady: () => {
+            console.log('Running MathJax');
+            window.mathjax_loaded = true
+            return MathJax.startup.defaultPageReady();
+        }
+    },
     tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']]
     },
@@ -10,6 +18,7 @@ window.MathJax = {
 global = {};
 global.messages = 0;
 global.generating = false;
+let currentAnimationPromise = null;
 
 function sendButtonClicked() {
     if (!global.generating) {
@@ -324,8 +333,7 @@ function botMessage(bit) {
     if (ongoing) {
         var isScrolledToBottom = getScrolledToBottom();
         currentRawMessage += bit;
-        //currentMessage.innerHTML = DOMPurify.sanitize(marked.parse(currentRawMessage));
-        currentMessage.innerHTML = marked.parse(currentRawMessage);
+        animateText(currentRawMessage, currentMessage); // Use animateText to display message
 
         MathJax.typesetPromise([currentMessage]).catch(function (err) {
             console.error('MathJax typesetPromise failed:', err);
@@ -342,10 +350,9 @@ function botMessage(bit) {
         array = makeNewMessage("", "bot");
         currentMessage = array[0];
         currentDIV = array[1];
-        console.log(currentMessage)
-        currentRawMessage = bit;
-        //currentMessage.innerHTML = DOMPurify.sanitize(marked.parse(currentRawMessage));
-        currentMessage.innerHTML = marked.parse(currentRawMessage);
+        console.log(currentMessage);
+        animateText(bit, currentMessage); // Start animation for the new message
+
         currentDIV.appendChild(currentMessage);
         updateScroll(isScrolledToBottom);
     }
@@ -428,27 +435,35 @@ function updateLanLabel(lan) {
 
 document.addEventListener('DOMContentLoaded', (event) => {
 
-    hljs.highlightAll();
-
-
-    addElementsToNewCodeBlocks();
-    updateCodeSyntaxHighlighting();
-
-    loadConversation();
-
-    const eventSource = new EventSource('/chat-events');
-
-    eventSource.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        if (data.end) {
-            botMessage(data.msg);
-            generationStop();
+    function load() {
+        if(window.mathjax_loaded==false) {
+            setTimeout(load, 1);
+            return;
         }
-        else {
-            botMessage(data.msg);
-        }
-    };
-
+        speedTest();
+    
+        hljs.highlightAll();
+    
+    
+        addElementsToNewCodeBlocks();
+        updateCodeSyntaxHighlighting();
+    
+        loadConversation();
+    
+        const eventSource = new EventSource('/chat-events');
+    
+        eventSource.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+            if (data.end) {
+                botMessage(data.msg);
+                generationStop();
+            }
+            else {
+                botMessage(data.msg);
+            }
+        };
+    }
+    load();
 
 });
 
@@ -479,4 +494,47 @@ function updateCodeSyntaxHighlighting() {
             hljs.highlightElement(block);
         }
     });
+}
+
+function speedTest() {
+    time1 = Date.now();
+    fetch('/speedtest', {
+        method: 'GET'
+    })
+        .then(data => {
+            time2 = Date.now();
+            speed = time2 - time1;
+            console.log('Time:', speed + 'ms');
+            window.speed = speed;
+        })
+        .catch(error => {
+            console.error('Speed-test error:', error);
+        });
+}
+
+async function animateText(text, element) {
+    if (currentAnimationPromise) {
+        clearTimeout(currentAnimationPromise.timeoutId);
+        currentAnimationPromise.resolve(); // Resolve the previous promise
+    }
+
+    let promise = new Promise(resolve => {
+        let interval = window.speed / text.length;
+        let index = 0;
+        const addCharacter = () => {
+            if (index === 0) {
+                //element.innerHTML = ''; // Clear the text at the start
+            }
+            element.innerHTML += text.charAt(index);
+            index++;
+            if (index < text.length) {
+                currentAnimationPromise.timeoutId = setTimeout(addCharacter, interval);
+            } else {
+                resolve();
+            }
+        };
+        currentAnimationPromise = { timeoutId: setTimeout(addCharacter, interval), resolve };
+    });
+
+    await promise;
 }

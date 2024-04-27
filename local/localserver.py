@@ -114,9 +114,7 @@ def speedtest():
 class Socket():
     def __init__(self):
         sio = socketio.Client()
-        http_session = requests.Session()
-        http_session.verify = False
-        sio = socketio.Client(http_session=http_session)
+        sio = socketio.Client()
         sio.connect(url, namespaces=['/backend'])
         
         @sio.event(namespace='/backend')

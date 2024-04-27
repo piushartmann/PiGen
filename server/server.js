@@ -685,6 +685,10 @@ app.get('/healthCheck', async (req, res) => {
     res.status(200).send("OK");
 });
 
+app.get('/speedtest', async (req, res) => {
+    res.status(200).send("OK");
+});
+
 async function getGif(tag) {
     const response = await fetch(`https://api.giphy.com/v1/gifs/random?api_key=YvA91J6U5kt2iQgoNtIyVEiJ6T97iyQ7&tag=${tag}&rating=g`, {
         method: 'GET'
