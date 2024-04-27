@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     }).then(response => response.json())
         .then(data => {
             console.log(data);
-            names = Object.keys(data);
+            names = data;
             var userTable = document.getElementById("userTable");
             for (let i = 0; i < names.length; i++) {
                 key = names[i];

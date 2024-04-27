@@ -7,7 +7,8 @@ const Jimp = require('jimp');
 const ExpressPeerServer = require("peer").ExpressPeerServer;
 const http = require("http");
 const cors = require('cors');
-const { stringify } = require('querystring');
+const { isStringObject } = require('util/types');
+const Mongo = require('./MongoConnector.js').MongoDB;
 
 const app = express();
 
@@ -36,43 +37,40 @@ app.use(session({
     saveUninitialized: false
 }));
 
-
-keyfile = null;
-keysynced = false;
 userdata = {};
 settings = {};
 p2pclientsWaiting = [];
+const db = new Mongo();
 
 var requeststack = [];
 
 const compute_token = process.env.COMPUTE_TOKEN;
 
-
 console.log("Starting");
 
-app.get('/', (req, res) => {
-    if (checkUser(req.session.user)) {
-        res.render("home.ejs", { username: req.session.user.username, admin: checkAdmin(req.session.user.username) });
+app.get('/', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        res.render("home.ejs", { username: req.session.user.username, admin: await db.checkAdmin(req.session.user.username) });
         return;
     }
     else {
-        res.render("login.ejs", { connected: keysynced });
+        res.render("login.ejs");
         return;
     }
 });
 
 
-app.post('/login', (req, res) => {
+app.post('/login', async (req, res) => {
     const user = req.body.username;
     const password = req.body.password;
 
-    validation = validate_password(user, password);
+    validation = await db.validate_password(user, password);
     if (isStringObject(validation)) {
         res.send(validation);
         return;
     }
 
-    if (validation) {
+    if (validation == true) {
         req.session.user = { username: user, password: password };
         res.redirect('/');
         return;
@@ -83,16 +81,16 @@ app.post('/login', (req, res) => {
     }
 });
 
-app.post('/logout', (req, res) => {
+app.post('/logout', async (req, res) => {
     req.session.user = null;
     res.redirect('/');
     return;
 });
 
-app.get('/settings', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (checkAdmin(req.session.user.username)) {
-            res.render("settings.ejs", { chatEnabled: getSetting("chatEnabled"), model: getSetting("model") });
+app.get('/settings', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.checkAdmin(req.session.user.username)) {
+            res.render("settings.ejs", { chatEnabled: await db.getSetting("chatEnabled"), model: await db.getSetting("model") });
             return;
         }
         else {
@@ -107,9 +105,9 @@ app.get('/settings', (req, res) => {
 
 });
 
-app.get('/newUser', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (checkAdmin(req.session.user.username)) {
+app.get('/newUser', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.checkAdmin(req.session.user.username)) {
             res.render("newUser.ejs");
         }
         else {
@@ -121,16 +119,16 @@ app.get('/newUser', (req, res) => {
     }
 });
 
-app.get('/settings/:user', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (checkAdmin(req.session.user.username)) {
+app.get('/settings/:user', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.checkAdmin(req.session.user.username)) {
             user = req.params.user;
             if (user == "admin") {
                 res.send("You cannot change the Admin");
                 return;
             }
-            if (keyfile[user]) {
-                res.render("userSettings.ejs", { userdata: userdata, user: user, password: keyfile[user]["password"], admin: keyfile[user]["admin"] });
+            if (await db.userExists(user)) {
+                res.render("userSettings.ejs", { userdata: userdata, user: user, password: await db.getUserPassword(user), admin: await db.getUserAdmin(user) });
             }
             else {
                 res.send("User not found");
@@ -145,9 +143,9 @@ app.get('/settings/:user', (req, res) => {
     }
 });
 
-app.post('/createUser', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (checkAdmin(req.session.user.username)) {
+app.post('/createUser', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.checkAdmin(req.session.user.username)) {
             const username = req.body.username;
             if (username == "admin") {
                 res.send("You cannot change the Admin");
@@ -166,11 +164,10 @@ app.post('/createUser', (req, res) => {
 
             const password = req.body.password;
             const admin = req.body.admin == "on";
-            keyfile[username] = { password: password, admin: admin };
+            await db.createUser(username, password, admin);
             if (!newUser) {
-                delete keyfile[oldName];
+                await db.deleteUser(oldName);
             }
-            requeststack.push({ "function": "createUser", "arguments": { username: username, password: password, admin: admin, oldName: oldName } });
             res.redirect('/settings');
         }
         else {
@@ -183,9 +180,9 @@ app.post('/createUser', (req, res) => {
 
 });
 
-app.post('/deleteUser', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (checkAdmin(req.session.user.username)) {
+app.post('.deleteUser', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.checkAdmin(req.session.user.username)) {
             const username = req.body.username;
             if (username == req.session.user.username) {
                 res.send("You cannot delete yourself");
@@ -196,8 +193,7 @@ app.post('/deleteUser', (req, res) => {
                 return;
             }
             console.log("Deleting user " + username);
-            delete keyfile[username];
-            requeststack.push({ "function": "deleteUser", "arguments": { username: username } });
+            await db.deleteUser(username);
         }
         else {
             res.send("You do not have the required permissions to access this page.");
@@ -208,10 +204,11 @@ app.post('/deleteUser', (req, res) => {
     }
 });
 
-app.get('/getUser', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (checkAdmin(req.session.user.username)) {
-            res.send(keyfile);
+
+app.get('/getUser', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.checkAdmin(req.session.user.username)) {
+            res.send(await db.listUsers());
         }
         else {
             res.send("You do not have the required permissions to access this page.");
@@ -223,10 +220,10 @@ app.get('/getUser', (req, res) => {
 
 });
 
-app.post('/set-chat', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (checkAdmin(req.session.user.username)) {
-            setSetting("chatEnabled", req.body.chatEnabled);
+app.post('/set-chat', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.checkAdmin(req.session.user.username)) {
+            await db.setSetting("chatEnabled", req.body.chatEnabled);
             res.status(200).send("Chat enabled set");
         }
         else {
@@ -238,8 +235,8 @@ app.post('/set-chat', (req, res) => {
     }
 });
 
-app.get('/secure', (req, res) => {
-    if (checkUser(req.session.user)) {
+app.get('/secure', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
         res.render("secure.ejs", { username: req.session.user.username, mydebug: global.debug });
     }
     else {
@@ -247,8 +244,8 @@ app.get('/secure', (req, res) => {
     }
 });
 
-app.get('/getUserName', (req, res) => {
-    if (checkUser(req.session.user)) {
+app.get('/getUserName', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
         res.send({ username: req.session.user.username });
     }
     else {
@@ -257,9 +254,9 @@ app.get('/getUserName', (req, res) => {
 });
 
 
-app.get('/chat', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (getSetting("chatEnabled")) {
+app.get('/chat', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.getSetting("chatEnabled")) {
             res.render("chat.ejs", { username: req.session.user.username });
         } else {
             res.send("Chat is disabled");
@@ -273,21 +270,21 @@ app.get('/chat', (req, res) => {
 
 
 Chathistory = {};
-app.post('/chat-msg', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (getSetting("chatEnabled")) {
+app.post('/chat-msg', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.getSetting("chatEnabled")) {
             msg = {
                 "role": "user",
                 "content": req.body.msg
             }
 
-            ChatHistory = getUserdata(req.session.user.username, "history");
+            ChatHistory = await db.getUserData(req.session.user.username, "history");
             if (ChatHistory == null) {
                 ChatHistory = [];
             }
             ChatHistory.push(msg);
 
-            addUserdata(req.session.user.username, "history", ChatHistory);
+            await db.setUserData(req.session.user.username, "history", ChatHistory);
 
             console.log(ChatHistory);
 
@@ -304,7 +301,7 @@ app.post('/chat-msg', (req, res) => {
 
 const Chatclients = new Map();
 
-app.get('/chat-events', function (req, res) {
+app.get('/chat-events', function async(req, res) {
     const headers = {
         'Content-Type': 'text/event-stream',
         'Connection': 'keep-alive',
@@ -326,8 +323,8 @@ app.get('/chat-events', function (req, res) {
     });
 });
 
-app.post('/stop-chat', (req, res) => {
-    if (checkUser(req.session.user)) {
+app.post('/stop-chat', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
         stopChat();
     }
     else {
@@ -335,19 +332,19 @@ app.post('/stop-chat', (req, res) => {
     }
 });
 
-app.post('/edit-message', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (getSetting("chatEnabled")) {
+app.post('/edit-message', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.getSetting("chatEnabled")) {
             user = req.session.user.username;
             index = req.body.index;
             newmsg = req.body.message;
-            ChatHistory = getUserdata(user, "history");
+            ChatHistory = await db.getUserData(user, "history");
             if (ChatHistory == null) {
                 return;
             }
             ChatHistory[index].content = newmsg;
             ChatHistory = ChatHistory.slice(0, index);
-            addUserdata(user, "history", ChatHistory);
+            await db.setUserData(user, "history", ChatHistory);
 
             requeststack.push({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
             res.status(200).send("Message edited");
@@ -358,17 +355,17 @@ app.post('/edit-message', (req, res) => {
     }
 });
 
-app.post('/delete-message', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (getSetting("chatEnabled")) {
+app.post('/delete-message', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.getSetting("chatEnabled")) {
             user = req.session.user.username;
             index = req.body.index;
-            ChatHistory = getUserdata(user, "history");
+            ChatHistory = await db.getUserData(user, "history");
             if (ChatHistory == null) {
                 return;
             }
             ChatHistory.splice(index, 1);
-            addUserdata(user, "history", ChatHistory);
+            await db.setUserData(user, "history", ChatHistory);
             res.status(200).send("Message removed");
         } else {
             res.send("Chat is disabled");
@@ -380,18 +377,18 @@ app.post('/delete-message', (req, res) => {
     }
 });
 
-app.post('/regenerate-message', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (getSetting("chatEnabled")) {
+app.post('/regenerate-message', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.getSetting("chatEnabled")) {
             user = req.session.user.username;
             index = req.body.index;
-            ChatHistory = getUserdata(user, "history");
+            ChatHistory = await db.getUserData(user, "history");
             if (ChatHistory == null) {
                 return;
             }
             //delete every message after the one to be regenerated
             ChatHistory = ChatHistory.slice(0, index);
-            addUserdata(user, "history", ChatHistory);
+            await db.setUserData(user, "history", ChatHistory);
 
             requeststack.push({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
             res.status(200).send("Message removed");
@@ -405,14 +402,14 @@ app.post('/regenerate-message', (req, res) => {
     }
 });
 
-app.post('/load-conversation', (req, res) => {
-    if (checkUser(req.session.user)) {
+app.post('/load-conversation', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
         if (req.body.username) {
             user = req.body.username;
         } else {
             user = req.session.user.username;
         }
-        ChatHistory = getUserdata(user, "history");
+        ChatHistory = await db.getUserData(user, "history");
         if (ChatHistory == null) {
             ChatHistory = [];
         }
@@ -424,7 +421,7 @@ app.post('/load-conversation', (req, res) => {
 
 });
 
-app.post('/add-to-history', (req, res) => {
+app.post('/add-to-history', async (req, res) => {
     token = req.headers['authorization'];
     if (token == compute_token) {
         username = req.body.user;
@@ -435,13 +432,13 @@ app.post('/add-to-history', (req, res) => {
             "content": fullmsg
         }
 
-        ChatHistory = getUserdata(username, "history");
+        ChatHistory = await db.getUserData(username, "history");
         if (ChatHistory == null) {
             ChatHistory = [];
         }
         ChatHistory.push(Jsonmsg);
 
-        addUserdata(username, "history", ChatHistory);
+        await db.setUserData(username, "history", ChatHistory);
 
         res.status(200).send("History updated");
     }
@@ -451,10 +448,10 @@ app.post('/add-to-history', (req, res) => {
 
 });
 
-app.post('/delete-history', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (getSetting("chatEnabled")) {
-            addUserdata(req.session.user.username, "history", []);
+app.post('/delete-history', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.getSetting("chatEnabled")) {
+            await db.setUserData(req.session.user.username, "history", []);
             console.log("History deleted");
             res.status(200).send("History deleted");
         } else {
@@ -468,7 +465,7 @@ app.post('/delete-history', (req, res) => {
 
 });
 
-app.post('/chat-msg-endpoint', (req, res) => {
+app.post('/chat-msg-endpoint', async (req, res) => {
     token = req.headers['authorization'];
     if (token == compute_token) {
         msg = req.body.msg;
@@ -484,9 +481,9 @@ app.post('/chat-msg-endpoint', (req, res) => {
 
 });
 
-app.get('/sd', (req, res) => {
-    if (checkUser(req.session.user)) {
-        lastrequest = getUserdata(req.session.user.username, "lastrequest")
+app.get('/sd', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        lastrequest = await db.getUserData(req.session.user.username, "lastrequest")
         if (lastrequest != null) {
             proprompt = lastrequest.prompt;
             negprompt = lastrequest.negprompt;
@@ -497,14 +494,14 @@ app.get('/sd', (req, res) => {
 
         }
 
-        lastimg = getUserdata(req.session.user.username, "lastimg")
+        lastimg = await db.getUserData(req.session.user.username, "lastimg")
         if (lastimg == null) {
             lastimg = "images/stable_diffusion_logo.png";
         } else {
             lastimg = "uploads/" + lastimg;
         }
 
-        res.render("sd.ejs", { username: req.session.user.username, prompt: proprompt, negprompt: negprompt, lastimg: lastimg, instant: getUserdata(req.session.user.username, "instant") });
+        res.render("sd.ejs", { username: req.session.user.username, prompt: proprompt, negprompt: negprompt, lastimg: lastimg, instant: await db.getUserData(req.session.user.username, "instant") });
     }
     else {
         res.redirect('/');
@@ -512,8 +509,8 @@ app.get('/sd', (req, res) => {
 
 });
 
-app.post('/sd-submit', (req, res) => {
-    if (checkUser(req.session.user)) {
+app.post('/sd-submit', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
         const prompt = req.body.prompt;
         const negprompt = req.body.negprompt;
         const user = req.session.user.username;
@@ -521,12 +518,12 @@ app.post('/sd-submit', (req, res) => {
         console.log(req.body);
         console.log(prompt, negprompt, user, model);
         requeststack.push({ "function": "generate_img", "arguments": { prompt: prompt, negprompt: negprompt, model: model, user: user } });
-        addUserdata(user, "lastrequest", { prompt: prompt, negprompt: negprompt });
+        await db.setUserData(user, "lastrequest", { prompt: prompt, negprompt: negprompt });
         res.redirect('/sd');
     }
 });
 
-app.get('/compute-endpoint', (req, res) => {
+app.get('/compute-endpoint', async (req, res) => {
     token = req.headers['authorization'];
     type = req.headers['type'];
     if (token == compute_token) {
@@ -561,7 +558,7 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
                 await image.writeAsync(req.file.path);
                 res.status(201).send('Image uploaded and processed successfully')
                 console.log("Image processed");
-                sendImageUpdateToClient(user, req.file.originalname);
+                await sendImageUpdateToClient(user, req.file.originalname);
                 if (nextdel != null) {
                     fs.unlink(nextdel, (err) => {
                         if (err) {
@@ -592,7 +589,7 @@ app.post('/compute-endpoint', upload.single('file'), async (req, res) => {
 
 const SDclients = new Map();
 
-app.get('/sd-events', function (req, res) {
+app.get('/sd-events', function async(req, res) {
     const headers = {
         'Content-Type': 'text/event-stream',
         'Connection': 'keep-alive',
@@ -613,29 +610,29 @@ app.get('/sd-events', function (req, res) {
     });
 });
 
-app.post('/setInstant', (req, res) => {
-    if (checkUser(req.session.user)) {
+app.post('/setInstant', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
         const instant = req.body.state;
-        addUserdata(req.session.user.username, "instant", instant);
-        res.status(200).send("Instant set");
+        await db.setUserData(req.session.user.username, "instant", instant);
+        res.status(200).send("Instant set to " + instant);
     }
 
 });
 
-app.post('/instant-prompt', (req, res) => {
-    if (checkUser(req.session.user)) {
+app.post('/instant-prompt', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
         const prompt = req.body.prompt;
         const negprompt = req.body.negprompt;
         const user = req.session.user.username;
         console.log(prompt, negprompt, user);
-        addUserdata(user, "lastrequest", { prompt: prompt, negprompt: negprompt });
+        await db.setUserData(user, "lastrequest", { prompt: prompt, negprompt: negprompt });
         requeststack.push({ "function": "generate_img", "arguments": { prompt: prompt, negprompt: negprompt, model: "sd_xl_turbo_1.0_fp16", user: user } });
         res.status(200).send("Prompt set");
     }
 
 });
 
-app.post('/userDataUpdate', (req, res) => {
+app.post('/userDataUpdate', async (req, res) => {
     const token = req.headers['authorization'];
     if (token == compute_token) {
         global.userdata = req.body;
@@ -647,27 +644,26 @@ app.post('/userDataUpdate', (req, res) => {
 
 });
 
-app.post('/chat-setModel', (req, res) => {
-    if (checkUser(req.session.user)) {
-        if (checkAdmin(req.session.user.username)) {
+app.post('/chat-setModel', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        if (await db.checkAdmin(req.session.user.username)) {
             const model = req.body.model;
-            setSetting("model", model);
-            requeststack.push({ "function": "chatsetModel", "arguments": { model: model } });
+            await db.setSetting("model", model);
             res.status(200).send("Model set");
         }
     }
 
 });
 
-app.get('/chat-getModel', (req, res) => {
-    if (checkUser(req.session.user)) {
-        res.send({ model: getSetting("model") });
+app.get('/chat-getModel', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        res.send({ model: await db.getSetting("model")});
     }
 });
 
 
 
-app.post('/sync-keys', (req, res) => {
+app.post('/sync-keys', async (req, res) => {
     const token = req.headers['authorization'];
     if (token == compute_token) {
         global.keyfile = req.body;
@@ -681,7 +677,7 @@ app.post('/sync-keys', (req, res) => {
 
 });
 
-app.post('/sync-settings', (req, res) => {
+app.post('/sync-settings', async (req, res) => {
     const token = req.headers['authorization'];
     if (token == compute_token) {
         global.settings = req.body;
@@ -694,7 +690,7 @@ app.post('/sync-settings', (req, res) => {
 
 });
 
-app.post('/init', (req, res) => {
+app.post('/init', async (req, res) => {
     const token = req.headers['authorization'];
     if (token == compute_token) {
         global.debug = req.body.debug;
@@ -707,7 +703,7 @@ app.post('/init', (req, res) => {
     }
 });
 
-app.get('/healthCheck', (req, res) => {
+app.get('/healthCheck', async (req, res) => {
     res.status(200).send("OK");
 });
 
@@ -723,7 +719,7 @@ async function getGif(tag) {
     return data.data.embed_url;
 }
 
-app.get('/gif/:tag', (req, res) => {
+app.get('/gif/:tag', async (req, res) => {
     getGif(req.params.tag)
         .then((data) => {
             res.send(data);
@@ -739,76 +735,20 @@ function sendChatUpdateToClient(username, msg, end) {
     }
 }
 
-function addUserdata(user, key, data) {
-    if (!global.userdata[user]) {
-        global.userdata[user] = {};
-    }
-    global.userdata[user][key] = data;
-    requeststack.push({ "function": "setUserdata", "arguments": { user: user, key: key, value: data } });
-}
-
-function getUserdata(user, key) {
-    if (global.userdata[user] && global.userdata[user][key]) {
-        return global.userdata[user][key];
-    } else {
-        return null;
-    }
-}
-
-function sendImageUpdateToClient(username, imagepath) {
+async function sendImageUpdateToClient(username, imagepath) {
     const client = SDclients.get(username);
     if (client) {
         client.res.write(`data: ${JSON.stringify({ imagepath })}\n\n`);
         client.lastimg = imagepath;
-        addUserdata(username, "lastimg", imagepath);
+        await db.setUserData(username, "lastimg", imagepath);
     }
 }
 
-function checkUser(user) {
-    if (!user) {
-        return false;
-    }
-    return validate_password(user.username, user.password);
-}
-
-function setSetting(setting, value) {
-    global.settings[setting] = value;
-    requeststack.push({ "function": "setSetting", "arguments": { setting: setting, value: value } });
-}
-
-function getSetting(setting) {
-    return global.settings[setting];
-}
-
-function checkAdmin(username) {
-    return global.keyfile[username]["admin"] == true;
-}
-
-function validate_password(username, key) {
-    if (global.keysynced) {
-        if (global.keyfile[username]) {
-            if (!global.keyfile[username]["password"]) {
-                return "Your Password is Wrong.";
-            }
-            else {
-                return keyfile[username]["password"] == key;
-            }
-        }
-        else {
-            return "This User does not exist.";
-        }
-    } else {
-        return false;
-    }
-}
 
 function stopChat() {
     requeststack.push({ "function": "stopChat", "arguments": "{}" });
 }
 
-requeststack.push({ "function": "getKeys", "arguments": "{}" });
-requeststack.push({ "function": "getSettings", "arguments": "{}" });
-requeststack.push({ "function": "updateUserData", "arguments": "{}" });
 requeststack.push({ "function": "init", "arguments": "{}" });
 
 const server = http.createServer(app);
@@ -823,8 +763,6 @@ const peerServer = ExpressPeerServer(server, peerServerOptions);
 app.use(peerServer);
 
 const { Server } = require("socket.io");
-const e = require('express');
-const { isStringObject } = require('util/types');
 const io = new Server(server);
 
 
