@@ -28,20 +28,6 @@ compute_token = os.environ["COMPUTE_TOKEN"]
 lla = ollamaAPI.API(url, compute_token)
 
 stop = False
-
-def signal_handler(sig, frame):
-    global stop
-    if not stop:
-        print("Performing cleanup...")
-        stop = True
-        lla.clearRam()
-        sd.unloadModel()
-        sys.exit(0)
-    else:
-        sys.exit(0)
-
-signal.signal(signal.SIGINT, signal_handler)
-
 class serverFunctions:
     def generate_img(prompt, negprompt, model, user):
         lla.clearRam()

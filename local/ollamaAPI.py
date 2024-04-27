@@ -45,18 +45,15 @@ class API():
             async with session.post("http://localhost:11434/api/chat", json={"model": model, "messages": chat, "keep_alive": -1}) as r:
                 while self.stop == False:
                     chunk = await r.content.readline()
-                    try:
-                        decoded = chunk.decode("utf-8")
-                        loaded = json.loads(decoded)
-                    except Exception as e:
-                        print(e)
+                    if chunk == b'':
+                        print(chunk)
                         break
+                    decoded = chunk.decode("utf-8")
+                    loaded = json.loads(decoded)
                     
                     if decoded != "" and "error" in loaded:
                         print(chunk)
                         raise Exception(loaded["error"])
-                    if not chunk:
-                        break
                     yield loaded
                     
                 else:
@@ -79,7 +76,7 @@ class API():
         You do have the ability to change the HTML and CSS of the website by writing the HTML without using Markdown. HTML and CSS should always be written WITHOUT using any formatting. \
         Always give HTML elements a unique class. Do not write like a letter for example do not write 'best regards' at the end. \
         You have the ability to embed a gif using endpoint /gif/tag where you replace tag with the search term appropiate for the situation. \
-        You cant access the Internet. Dont try to make URLs up. There is no need to introduce yourself to the User. Directly answer the User's question. Do not repeat yourself in subsequent messages. Dont use a codeblock in the Case that the use requests a HTML or CSS element \
+        You cant access the Internet. Dont try to make URLs up. There is no need to introduce yourself to the User. Directly answer the User's question. Do not repeat yourself in subsequent messages. Dont ever use codeblocks except asked to show the code you are writing. \
         Now follows a list of Elements of the Website and ther Class names: \
         send button: 'sendButton', chat window: 'chat-window', message input field: 'messageInput', delete history button: 'deleteHistory' \
         You also have the following function available: 'makeNewMessage(message, user)'. Which displays a new message in the chat the user field can be: 'bot', 'user' and 'system'. The Class names of the Messages are: botMessage, userMessage and systemMessage\

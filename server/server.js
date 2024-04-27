@@ -180,7 +180,7 @@ app.post('/createUser', async (req, res) => {
 
 });
 
-app.post('.deleteUser', async (req, res) => {
+app.post('/deleteUser', async (req, res) => {
     if (await db.checkUser(req.session.user)) {
         if (await db.checkAdmin(req.session.user.username)) {
             const username = req.body.username;
@@ -465,7 +465,7 @@ app.post('/delete-history', async (req, res) => {
 
 });
 
-app.post('/chat-msg-endpoint', async (req, res) => {
+app.post('/chat-msg-endpoint', (req, res) => {
     token = req.headers['authorization'];
     if (token == compute_token) {
         msg = req.body.msg;
@@ -730,7 +730,6 @@ app.get('/gif/:tag', async (req, res) => {
 function sendChatUpdateToClient(username, msg, end) {
     const client = Chatclients.get(username);
     if (client) {
-
         client.res.write(`data: ${JSON.stringify({ msg, end })}\n\n`);
     }
 }
