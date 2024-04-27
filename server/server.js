@@ -288,7 +288,7 @@ app.post('/chat-msg', async (req, res) => {
 
             console.log(ChatHistory);
 
-            requeststack.push({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
+            makeRequestToLocal({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
 
             console.log("Chat msg requested");
             res.status(200);
@@ -346,7 +346,7 @@ app.post('/edit-message', async (req, res) => {
             ChatHistory = ChatHistory.slice(0, index);
             await db.setUserData(user, "history", ChatHistory);
 
-            requeststack.push({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
+            makeRequestToLocal({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
             res.status(200).send("Message edited");
         } else {
             res.send("Chat is disabled");
@@ -390,7 +390,7 @@ app.post('/regenerate-message', async (req, res) => {
             ChatHistory = ChatHistory.slice(0, index);
             await db.setUserData(user, "history", ChatHistory);
 
-            requeststack.push({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
+            makeRequestToLocal({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
             res.status(200).send("Message removed");
         } else {
             res.send("Chat is disabled");
@@ -517,32 +517,10 @@ app.post('/sd-submit', async (req, res) => {
         const model = req.body['model-names'];
         console.log(req.body);
         console.log(prompt, negprompt, user, model);
-        requeststack.push({ "function": "generate_img", "arguments": { prompt: prompt, negprompt: negprompt, model: model, user: user } });
+        makeRequestToLocal({ "function": "generate_img", "arguments": { prompt: prompt, negprompt: negprompt, model: model, user: user } });
         await db.setUserData(user, "lastrequest", { prompt: prompt, negprompt: negprompt });
         res.redirect('/sd');
     }
-});
-
-app.get('/compute-endpoint', async (req, res) => {
-    token = req.headers['authorization'];
-    type = req.headers['type'];
-    if (token == compute_token) {
-        if (type == "request") {
-            if (requeststack.length == 0) {
-                res.send(null);
-            }
-            else {
-                prompt = requeststack.pop();
-                res.send(prompt);
-            }
-        } else {
-            res.status(400).send('Unsupported type');
-        }
-    }
-    else {
-        res.send("Unauthorized");
-    }
-
 });
 
 var nextdel = null;
@@ -626,7 +604,7 @@ app.post('/instant-prompt', async (req, res) => {
         const user = req.session.user.username;
         console.log(prompt, negprompt, user);
         await db.setUserData(user, "lastrequest", { prompt: prompt, negprompt: negprompt });
-        requeststack.push({ "function": "generate_img", "arguments": { prompt: prompt, negprompt: negprompt, model: "sd_xl_turbo_1.0_fp16", user: user } });
+        makeRequestToLocal({ "function": "generate_img", "arguments": { prompt: prompt, negprompt: negprompt, model: "sd_xl_turbo_1.0_fp16", user: user } });
         res.status(200).send("Prompt set");
     }
 
@@ -745,10 +723,8 @@ async function sendImageUpdateToClient(username, imagepath) {
 
 
 function stopChat() {
-    requeststack.push({ "function": "stopChat", "arguments": "{}" });
+    makeRequestToLocal({ "function": "stopChat", "arguments": "{}" });
 }
-
-requeststack.push({ "function": "init", "arguments": "{}" });
 
 const server = http.createServer(app);
 
@@ -763,24 +739,50 @@ app.use(peerServer);
 
 const { Server } = require("socket.io");
 const io = new Server(server);
+const backEndIO = io.of('/backend');
 
 
 server.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
 
+keepAlive = setInterval(() => {
+    db.checkConnection();
+}, 10000);
+
 io.on('connection', (socket) => {
     const cookies = socket.handshake.headers.cookie;
 
     console.log('a user connected');
+    socket.emit('chat message', "Hello World");
     socket.on('disconnect', () => {
         console.log('user disconnected');
     });
-});
 
-io.on('connection', (socket) => {
     socket.on('chat message', (msg) => {
         console.log('message: ' + msg);
-        socket.emit('chat message', "Hello World back");
+        socket.emit('chat message', "Hello World");
     });
 });
+
+backEndIO.on('connection', (socket) => {
+    console.log("Backend connected");
+    global.backendConnected = true;
+    makeRequestToLocal({ "function": "init", "arguments": "{}" });
+    socket.on('backend', (data) => {
+        if (data.auth != compute_token) {
+            return;
+        }
+        console.log("Data from backEnd: " + data.msg);
+    });
+});
+
+backEndIO.on('disconnect', () => {
+    console.log("Backend disconnected");
+    global.backendConnected = false;
+});
+
+
+function makeRequestToLocal(reqJson) {
+    backEndIO.emit('backend', reqJson);
+}

@@ -441,6 +441,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
     eventSource.onmessage = function (event) {
         const data = JSON.parse(event.data);
         if (data.end) {
+            botMessage(data.msg);
             generationStop();
         }
         else {

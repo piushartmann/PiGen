@@ -64,7 +64,7 @@ module.exports.MongoDB = class MongoDB {
     }
 
     async deleteUser(username) {
-        await User.deleteOne({ username: username });
+        await this.user.deleteOne({ username: username });
     }
 
     async createUser(username, password, admin) {
@@ -143,5 +143,9 @@ module.exports.MongoDB = class MongoDB {
             return userData ? userData.value : null;
         }
         return null;
+    }
+
+    async checkConnection() {
+        return this.mongoose.connection.readyState;
     }
 }

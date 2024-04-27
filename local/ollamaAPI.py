@@ -13,6 +13,7 @@ class API():
         self.loaded = False
         self.model = None
         self.stop = False
+        self.bundleBits = 10
         
     def setModel(self, model):
         self.model = model
@@ -118,9 +119,26 @@ class API():
             raise Exception("No Model set")
         
         buffer = ""
+        i = 0
+        bundleBuffer = ""
         async for event in self.makeAPIreq(msg, self.model, user):
-            buffer += event["message"]["content"]
-            self.sendChatbit(event["message"]["content"], user, event["done"])
+            done = event["done"]
+            if i < 0:
+                bundleBuffer += event["message"]["content"]
+            else:
+                if i == self.bundleBits:
+                    i = 0
+                    bundleBuffer += event["message"]["content"]
+                    self.sendChatbit(bundleBuffer, user, done)
+                    buffer += event["message"]["content"]
+                    bundleBuffer = ""
+                else:
+                    i += 1
+                    bundleBuffer += event["message"]["content"]
+                    buffer += event["message"]["content"]
+                    
+            if done:
+                self.sendChatbit(bundleBuffer, user, done)
 
         print(buffer)
         headers = {"authorization":self.compute_token}
@@ -129,6 +147,9 @@ class API():
 
     def chat(self, msg, user):
         asyncio.run(self.asyncChatreq(msg, user))
+        
+    def setBundleBits(self, bits):
+        self.bundleBits = bits
 
 if __name__ == "__main__":
     lla = API("http://localhost:3000", "testtoken")

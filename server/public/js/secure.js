@@ -1,4 +1,4 @@
-var socketMode = false;
+var socketCheckbox = false;
 var mode = null;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -6,10 +6,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const socket = new socketMode();
 
     const checkbox = document.getElementById("modeSelector");
-    mode = socketMode ? socket : p2p;
+    mode = socketCheckbox ? socket : p2p;
     checkbox.addEventListener("change", function () {
-        socketMode = checkbox.checked == true;
-        mode = socketMode ? socket : p2p;
+        socketCheckbox = checkbox.checked == true;
+        mode = socketCheckbox ? socket : p2p;
         resetTable();
         mode.listAllPeers();
     });

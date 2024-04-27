@@ -3,9 +3,10 @@ import json
 import time
 import base64
 import threading
-import signal
 import sys
 import os
+import socketio
+import signal
 
 import stableAPI as sd
 import ollamaAPI
@@ -64,6 +65,9 @@ class serverFunctions:
             "debug": debug
         }
         r = requests.post(url+"/init", headers=headers, json=body)
+    
+    def setChatBundleBits(bits):
+        lla.setBundleBits(bits)
 
 
 def update_progress(username):
@@ -100,37 +104,60 @@ def process_data(data):
     function = data['function']
     arguments = data['arguments']
     eval(f"serverFunctions.{function}(**{arguments})")
+    
+def speedtest():
+    start = time.time()
+    r = requests.get(url+"/healthCheck")
+    end = time.time()
+    print(f"Speedtest: {end-start} seconds")
 
+class Socket():
+    def __init__(self):
+        sio = socketio.Client()
+        http_session = requests.Session()
+        http_session.verify = False
+        sio = socketio.Client(http_session=http_session)
+        sio.connect(url, namespaces=['/backend'])
+        
+        @sio.event(namespace='/backend')
+        def connect():
+            print("I'm connected!")
+            
+        @sio.on('backend', namespace='/backend')
+        def on_message(data):
+            print("I received "+ str(data))
+            process = threading.Thread(target=process_data, args=(data,))
+            process.start()
+            
+        self.sio = sio
+        
+    def disconnect(self):
+        self.sio.disconnect()
+
+    def send(self, msg):
+        data = {"auth": compute_token, "msg": msg}
+        print(f"SocketIO: Sending: {msg}")
+        self.sio.emit('backend', data, namespace='/backend')
+        
+    def wait(self):
+        self.sio.wait()
 
 def main():
-    while not checkPublicServer():
-        print("Cant connect to public Server ... retrying in 5 seconds")
-        time.sleep(5)
-    else:
-        print("Connected to public server")
-    while True:
-        if stop:
-            break
-        
-        try:
-            headers = {"authorization":compute_token, "type":"request"}
-            r = requests.get(url+"/compute-endpoint", headers=headers)
-            if r.text != "":
-                try: 
-                    data = json.loads(r.text)
-                except json.decoder.JSONDecodeError as e:
-                    print("Error decoding JSON")
-                    print(e)
-                    print(r.text)
-                    continue
-                process = threading.Thread(target=process_data, args=(data,))
-                process.start()
-            else:
-                time.sleep(0.1)
+    sio = Socket()
+    sio.send("Connected to local server")
+    speedtest()
+    
+    def signal_handler(sig, frame):
+        lla.clearRam()
+        sd.unloadModel()
+        sio.disconnect()
+        sys.exit(0)
 
-        except requests.ConnectionError:
-            print("Lost Connection to public Server ... retrying in 5 seconds")
-            time.sleep(5)
+    signal.signal(signal.SIGINT, signal_handler)
+
+    while True:
+        pass
+        
 
 if __name__ == "__main__":
     main()

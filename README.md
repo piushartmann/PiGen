@@ -7,8 +7,7 @@ Live Website [here](https://superladens.onrender.com/)
 ## ToDo
 
 1. **Backend**
-    1. MongoDB instead of Local sync
-    2. Websocket connection to Local
+    1. Websocket connection to Local
 
 2. **SecureChat**
     1. Markdown Support
