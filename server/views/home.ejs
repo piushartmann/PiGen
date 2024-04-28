@@ -23,15 +23,21 @@
       </a>
 
     </div>
+    
+  </div>
+  <div id="buttons">
 
-    <form action="/logout" method="POST">
-      <button class="logout-button" type="submit">Logout</button>
-    </form>
+    <button class="logout button" onclick="location.href = '/logout'">
+      <span class="button-text">Logout</span>
+    </button>
 
-    <button class="settings-button" onclick="location.href = '/settings'">
+    <button class="settings button" onclick="location.href = '/settings'">
       <span class="button-text">Settings</span>
     </button>
-    
+
+    <button class="profile button" onclick="location.href = '/profile'">
+      <span class="button-text">Profile</span>
+    </button>
   </div>
 </body>
 </html>

@@ -53,25 +53,21 @@ body {
     text-align: center;
 }
 
-.logout-button {
+#buttons {
     position: absolute;
-    top: 0;
+    top: 5px;
     right: 0;
-    margin: 10px;
-    padding: 10px;
-    background-color: var(--color-primary);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
 }
 
-:root[admin="true"] .settings-button {
-    position: absolute;
-    top: 50px;
+
+.button {
+    position: relative;
     right: 0;
-    margin: 10px;
-    padding: 10px;
+    margin: 5px;
+    padding: 13px;
     background-color: gray;
     color: white;
     border: none;
@@ -81,6 +77,18 @@ body {
     text-decoration-line: none;
 }
 
+:root[admin="false"] .settings {
+    display: none;
+}
+
+.logout {
+    background-color: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
 
 @media only screen and (max-device-width: 480px) {
     .grid-container {
@@ -88,14 +96,24 @@ body {
         grid-gap: 0;
     }
 
-    .logout-button {
-        top: auto;
-        right: calc(50% - calc(30% / 2));
+    .button {
         bottom: 0;
         font-size: xx-large;
         width: 30%;
         height: 10%;
-        margin: 0%;
+        margin: auto;
+        padding: 5%;
+    }
+    
+    #buttons {
+        position: absolute;
+        bottom: 0;
+        top: auto;
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        align-items: flex-end;
+        right: auto;
     }
 
     body {
@@ -124,12 +142,8 @@ body {
         padding: 10px;
     }
 
-    .grid-item{
+    .grid-item {
         box-shadow: none;
     }
 
-}
-
-:root[admin="false"] .settings-button {
-    display: none;
 }

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile Editing</title>
+</head>
+<body>
+    <h1>Profile Editing</h1>
+    
+    <form action="/change-profile" method="POST">        
+        <label for="newpassword">New Password:</label><br>
+        <input type="password" id="newpassword" name="newpassword" required autocomplete="new-password"><br><br>
+
+        <label for="oldpassword">Old Password:</label><br>
+        <input type="password" id="oldpassword" name="oldpassword" required autocomplete="password"><br><br>
+        
+        <input type="submit" value="Save">
+    </form>
+</body>
+</html>

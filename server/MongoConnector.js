@@ -68,8 +68,16 @@ module.exports.MongoDB = class MongoDB {
     }
 
     async createUser(username, password, admin) {
-        const newUser = new this.user({ username, password, admin });
-        await newUser.save();
+        const hashedPassword = this.hashPassword(password);
+        const existingUser = await this.user.findOne({ username: username });
+        if (existingUser) {
+            existingUser.password = hashedPassword;
+            existingUser.admin = admin;
+            await existingUser.save();
+        } else {
+            const newUser = new this.user({ username, hashedPassword, admin });
+            await newUser.save();
+        }
     }
 
     async listUsers() {
@@ -77,9 +85,10 @@ module.exports.MongoDB = class MongoDB {
     }
 
     async validate_password(username, key, log = true) {
+        const hashedPassword = this.hashPassword(key);
         const password = await this.getUserPassword(username);
         if (password) {
-            if (password == key) {
+            if (password == hashedPassword) {
                 if (log)
                     console.log("MongoConnector: User '" + username + "' is authenticated.");
                 return true;
@@ -87,13 +96,13 @@ module.exports.MongoDB = class MongoDB {
             else {
                 if (log)
                     console.log("MongoConnector: Password is incorrect");
-                return "Invalid password (name " + username + " Pass: " + key + ")";
+                return false;
             }
         }
         else {
             if (log)
-                console.log("MongoConnector: User does not exist (name " + username + " Pass: " + key + ")");
-            return "This User does not exist.";
+                console.log("MongoConnector: User does not exist (name " + username + " Pass: " + hashedPassword + ")");
+            return false;
         }
     }
 
@@ -148,4 +157,12 @@ module.exports.MongoDB = class MongoDB {
     async checkConnection() {
         return this.mongoose.connection.readyState;
     }
+
+    hashPassword(password) {
+        const crypto = require('crypto');
+        const hash = crypto.createHash('sha256');
+        hash.update(password);
+        return hash.digest('hex');
+    }
+    
 }

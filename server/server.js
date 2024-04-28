@@ -81,10 +81,42 @@ app.post('/login', async (req, res) => {
     }
 });
 
-app.post('/logout', async (req, res) => {
+app.get('/logout', async (req, res) => {
     req.session.user = null;
     res.redirect('/');
     return;
+});
+
+app.get('/profile', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        res.render("profile.ejs", { username: req.session.user.username });
+        return;
+    }
+    else {
+        res.redirect('/');
+        return;
+    }
+});
+
+app.post('/change-profile', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        const user = req.session.user.username;
+        const password = req.body.oldpassword;
+        const newpassword = req.body.newpassword;
+
+        if (await db.validate_password(user, password)) {
+            await db.createUser(user, newpassword, await db.getUserAdmin(user));
+            res.render("redirect.ejs", { redirect: '/profile', time: 1000, text: "Successfully changed Password!", type:"success" });
+            return;
+        }
+        else {
+            res.render("redirect.ejs", { redirect: '/profile', time: 1000, text: "Incorrect old password", type:"error"});
+        }
+    }
+    else {
+        res.redirect('/');
+        return;
+    }
 });
 
 app.get('/settings', async (req, res) => {
@@ -152,9 +184,9 @@ app.post('/createUser', async (req, res) => {
                 return;
             }
             referer = req.headers.referer
+            oldName = referer.split("/").pop();
             newUser = !referer.includes("settings");
-            if (!newUser) {
-                oldName = referer.split("/").pop();
+            if (!newUser && oldName != username) {
                 console.log("Renaming user from " + oldName + " to " + username);
             }
             else {
@@ -165,7 +197,7 @@ app.post('/createUser', async (req, res) => {
             const password = req.body.password;
             const admin = req.body.admin == "on";
             await db.createUser(username, password, admin);
-            if (!newUser) {
+            if (!newUser && oldName != username) {
                 await db.deleteUser(oldName);
             }
             res.redirect('/settings');
@@ -753,6 +785,7 @@ const peerServer = ExpressPeerServer(server, peerServerOptions);
 app.use(peerServer);
 
 const { Server } = require("socket.io");
+const { type } = require('os');
 const io = new Server(server);
 const backEndIO = io.of('/backend');
 const secure = io.of('/secure');
@@ -806,14 +839,14 @@ secure.on('connection', (socket) => {
         if (user in Socketclients) {
             console.log("Comm join request from " + username + " to " + user);
             id = generateID(8);
-            Socketclients[user].emit('comm join', {id: id, user: username});
+            Socketclients[user].emit('comm join', { id: id, user: username });
 
             Socketclients[user].on('comm accept', function (accept) {
                 console.log(accept)
                 if (accept) {
                     Socketclients[user].join(id);
                     socket.join(id);
-                    socket.emit('comm join', {id: id, user: username});
+                    socket.emit('comm join', { id: id, user: username });
                 }
             }.bind(this));
         }

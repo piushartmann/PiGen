@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+    <title><%= text %></title>
+</head>
+<body>
+    <h1 id="text"><%= text %></h1>
+</body>
+</html>
+
+<script>
+    var type = "<%= type %>";
+    const text = document.getElementById("text")
+    if (type == "error") {
+        text.style.color = "red";
+    } else if (type == "success") {
+        text.style.color = "green";
+    }
+
+    setTimeout(() => {
+        window.location.href = "<%= redirect %>";
+    }, <%= time %>);
+</script>
