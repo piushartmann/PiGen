@@ -75,7 +75,7 @@ module.exports.MongoDB = class MongoDB {
             existingUser.admin = admin;
             await existingUser.save();
         } else {
-            const newUser = new this.user({ username, hashedPassword, admin });
+            const newUser = new this.user({ username, password: hashedPassword, admin });
             await newUser.save();
         }
     }

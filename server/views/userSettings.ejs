@@ -15,7 +15,7 @@
         <label for="username">Username:</label>
         <input type="username" id="username" name="username" required autocomplete="username"><br><br>
 
-        <label for="password">Password:</label>
+        <label for="password">New Password:</label>
         <input type="password" id="password" name="password" required autocomplete="new-password"><br><br>
 
         <label for="admin">Admin:</label>
@@ -44,7 +44,7 @@
     usernameField.value = user
 
     passwordField = document.getElementById("password")
-    passwordField.value = password
+    passwordField.value = ""
     passwordField.type = "text"
 
     adminBox = document.getElementById("admin")
