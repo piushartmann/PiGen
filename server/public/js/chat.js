@@ -331,9 +331,6 @@ function botMessage(bit) {
     var isScrolledToBottom = getScrolledToBottom();
     if (ongoing) {
         currentRawMessage += bit;
-        if (currentBitSize > 2) {
-            animateText(bit, currentMessage, currentRawMessage);
-        }
         currentMessage.innerHTML = marked.parse(currentRawMessage);
 
         MathJax.typesetPromise([currentMessage]).catch(function (err) {
@@ -351,9 +348,6 @@ function botMessage(bit) {
         currentMessage = array[0];
         currentDIV = array[1];
         console.log(currentMessage);
-        if (currentBitSize > 2) {
-            animateText(bit, currentMessage, bit);
-        }
         currentRawMessage += bit;
         currentDIV.appendChild(currentMessage);
         updateScroll(isScrolledToBottom);
