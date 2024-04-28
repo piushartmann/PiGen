@@ -503,8 +503,9 @@ app.post('/chat-msg-endpoint', (req, res) => {
         msg = req.body.msg;
         end = req.body.end;
         user = req.body.user;
+        bitsize = req.body.bitsize;
         console.log(msg);
-        sendChatUpdateToClient(user, msg, end);
+        sendChatUpdateToClient(user, msg, end, bitsize);
         res.status(200).send("Chat message sent");
     }
     else {
@@ -752,10 +753,10 @@ app.get('/gif/:tag', async (req, res) => {
 
 });
 
-function sendChatUpdateToClient(username, msg, end) {
+function sendChatUpdateToClient(username, msg, end, bitsize) {
     const client = Chatclients.get(username);
     if (client) {
-        client.res.write(`data: ${JSON.stringify({ msg, end })}\n\n`);
+        client.res.write(`data: ${JSON.stringify({ msg, end, bitsize })}\n\n`);
     }
 }
 

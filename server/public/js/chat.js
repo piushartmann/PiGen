@@ -20,6 +20,7 @@ global.messages = 0;
 global.generating = false;
 let currentAnimationPromise = null;
 let currentAnimationIndex = 0;
+let currentBitSize = 1;
 
 function sendButtonClicked() {
     if (!global.generating) {
@@ -330,8 +331,10 @@ function botMessage(bit) {
     var isScrolledToBottom = getScrolledToBottom();
     if (ongoing) {
         currentRawMessage += bit;
-        //currentMessage.innerHTML = marked.parse(currentRawMessage);
-        animateText(bit, currentMessage, currentRawMessage);
+        if (currentBitSize > 2) {
+            animateText(bit, currentMessage, currentRawMessage);
+        }
+        currentMessage.innerHTML = marked.parse(currentRawMessage);
 
         MathJax.typesetPromise([currentMessage]).catch(function (err) {
             console.error('MathJax typesetPromise failed:', err);
@@ -348,7 +351,9 @@ function botMessage(bit) {
         currentMessage = array[0];
         currentDIV = array[1];
         console.log(currentMessage);
-        animateText(bit, currentMessage, bit);
+        if (currentBitSize > 2) {
+            animateText(bit, currentMessage, bit);
+        }
         currentRawMessage += bit;
         currentDIV.appendChild(currentMessage);
         updateScroll(isScrolledToBottom);
@@ -451,6 +456,7 @@ document.addEventListener('DOMContentLoaded', (event) => {
 
         eventSource.onmessage = function (event) {
             const data = JSON.parse(event.data);
+            currentBitSize = data.bitsize;
             if (data.end) {
                 botMessage(data.msg);
                 generationStop();
@@ -534,13 +540,15 @@ async function animateText(text, element, currentRawMessage) {
     });
 
     await promise;
-    
-    element.innerHTML = marked.parse(currentCharacter);
 
-    MathJax.typesetPromise([currentMessage]).catch(function (err) {
-        console.error('MathJax typesetPromise failed:', err);
-    });
+    if (currentBitSize > 2) {
+        element.innerHTML = marked.parse(currentCharacter);
 
-    addElementsToNewCodeBlocks();
-    updateCodeSyntaxHighlighting();
+        MathJax.typesetPromise([currentMessage]).catch(function (err) {
+            console.error('MathJax typesetPromise failed:', err);
+        });
+
+        addElementsToNewCodeBlocks();
+        updateCodeSyntaxHighlighting();
+    }
 }

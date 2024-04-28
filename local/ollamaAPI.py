@@ -108,7 +108,7 @@ class API():
     def sendChatbit(self, msg, user, end):
         print(msg)
         headers = {"authorization":self.compute_token}
-        body = {"msg":msg, "user":user, "end":end}
+        body = {"msg":msg, "user":user, "end":end, "bitsize": self.bundleBits}
         r = requests.post(self.url+"/chat-msg-endpoint", headers=headers, json=body)
         if r.status_code != 200:
             print(r.text)
