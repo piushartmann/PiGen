@@ -10,14 +10,14 @@
   <div class="container">
     <h1>Welcome, <%= username %>!</h1>
 
-    <div class="grid-container">
+    <div class="grid-container" id="grid-container">
       <a class="grid-item" href="/sd">
         <img src="/icons/stable_diffusion_logo.png" alt="SD Logo">
       </a>
       <a class="grid-item" href="/chat">
         <img src="/icons/llama.png" alt="Chat Logo">
       </a>
-      <div class="grid-item comingsoon">Coming Soon</div>
+
       <a class="grid-item" href="/secure">
         <img src="/icons/messenger.png" alt="P2P Logo">
       </a>
@@ -46,5 +46,7 @@
   username = "<%= username %>"
   document.addEventListener('DOMContentLoaded', (event) => {
     setAdmin(<%= admin %>);
+
+  document.body.style.setProperty('--num-tiles', document.getElementById("grid-container").children.length);
 });
 </script>

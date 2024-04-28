@@ -106,6 +106,7 @@ class API():
 
 
     def sendChatbit(self, msg, user, end):
+        print(msg)
         headers = {"authorization":self.compute_token}
         body = {"msg":msg, "user":user, "end":end}
         r = requests.post(self.url+"/chat-msg-endpoint", headers=headers, json=body)
@@ -121,7 +122,16 @@ class API():
         buffer = ""
         i = 0
         bundleBuffer = ""
+        time1 = None
+        speed = None
         async for event in self.makeAPIreq(msg, self.model, user):
+            if time1 == None:
+                time1 = time.time()
+            else:
+                time2 = time.time()
+                speed = time2 - time1
+                time1 = time2
+                print(f"Speed: {speed}")
             done = event["done"]
             if i < 0:
                 bundleBuffer += event["message"]["content"]

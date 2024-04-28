@@ -19,6 +19,7 @@ global = {};
 global.messages = 0;
 global.generating = false;
 let currentAnimationPromise = null;
+let currentAnimationIndex = 0;
 
 function sendButtonClicked() {
     if (!global.generating) {
@@ -76,6 +77,7 @@ function loadConversation() {
                 isBot = message.role == "assistant"
                 if (isBot) {
                     array = makeNewMessage(message.content, "bot");
+                    array[0].innerHTML = marked.parse(message.content);
                 }
                 else {
                     array = makeNewMessage(message.content, "user");
@@ -123,12 +125,7 @@ function makeNewMessage(message, user) {
     newDIV.className = isBot ? "botMessage" : "userMessage";
     newImage.className = isBot ? "botImage" : "userImage";
 
-    if (isBot) {
-        newMessage.innerHTML = marked.parse(message);
-    }
-    else {
-        newMessage.textContent = message;
-    }
+    newMessage.textContent = message;
 
     newImage.onclick = function () {
         const message = newImage.parentElement;
@@ -333,7 +330,8 @@ function botMessage(bit) {
     var isScrolledToBottom = getScrolledToBottom();
     if (ongoing) {
         currentRawMessage += bit;
-        animateText(currentRawMessage, currentMessage);
+        //currentMessage.innerHTML = marked.parse(currentRawMessage);
+        animateText(bit, currentMessage, currentRawMessage);
 
         MathJax.typesetPromise([currentMessage]).catch(function (err) {
             console.error('MathJax typesetPromise failed:', err);
@@ -350,8 +348,8 @@ function botMessage(bit) {
         currentMessage = array[0];
         currentDIV = array[1];
         console.log(currentMessage);
-        animateText(bit, currentMessage);
-
+        animateText(bit, currentMessage, bit);
+        currentRawMessage += bit;
         currentDIV.appendChild(currentMessage);
         updateScroll(isScrolledToBottom);
     }
@@ -435,22 +433,22 @@ function updateLanLabel(lan) {
 document.addEventListener('DOMContentLoaded', (event) => {
 
     function load() {
-        if(window.mathjax_loaded==false) {
+        if (window.mathjax_loaded == false) {
             setTimeout(load, 1);
             return;
         }
         speedTest();
-    
+
         hljs.highlightAll();
-    
-    
+
+
         addElementsToNewCodeBlocks();
         updateCodeSyntaxHighlighting();
-    
+
         loadConversation();
-    
+
         const eventSource = new EventSource('/chat-events');
-    
+
         eventSource.onmessage = function (event) {
             const data = JSON.parse(event.data);
             if (data.end) {
@@ -511,24 +509,24 @@ function speedTest() {
         });
 }
 
-async function animateText(text, element) {
+async function animateText(text, element, currentRawMessage) {
     if (currentAnimationPromise) {
         clearTimeout(currentAnimationPromise.timeoutId);
-        currentAnimationPromise.resolve(); // Resolve the previous promise
+        currentAnimationPromise.resolve();
     }
+
+    let currentCharacter = currentRawMessage;
 
     let promise = new Promise(resolve => {
         let interval = window.speed / text.length;
-        let index = 0;
         const addCharacter = () => {
-            if (index === 0) {
-                //element.innerHTML = ''; // Clear the text at the start
-            }
-            element.innerHTML += text.charAt(index);
-            index++;
-            if (index < text.length) {
+            currentCharacter += text.charAt(currentAnimationIndex);
+            currentAnimationIndex++;
+            if (currentAnimationIndex < text.length) {
                 currentAnimationPromise.timeoutId = setTimeout(addCharacter, interval);
             } else {
+                // Add the remaining characters
+                currentCharacter += text.slice(currentAnimationIndex);
                 resolve();
             }
         };
@@ -536,4 +534,13 @@ async function animateText(text, element) {
     });
 
     await promise;
+    
+    element.innerHTML = marked.parse(currentCharacter);
+
+    MathJax.typesetPromise([currentMessage]).catch(function (err) {
+        console.error('MathJax typesetPromise failed:', err);
+    });
+
+    addElementsToNewCodeBlocks();
+    updateCodeSyntaxHighlighting();
 }

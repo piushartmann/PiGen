@@ -106,7 +106,7 @@ app.post('/change-profile', async (req, res) => {
 
         if (await db.validate_password(user, password)) {
             await db.createUser(user, newpassword, await db.getUserAdmin(user));
-            res.render("redirect.ejs", { redirect: '/profile', time: 1000, text: "Successfully changed Password!", type:"success" });
+            res.render("redirect.ejs", { redirect: '/profile', time: 1000, text: "Successfully changed Password!", type:"success"});
             return;
         }
         else {
@@ -767,7 +767,6 @@ async function sendImageUpdateToClient(username, imagepath) {
         await db.setUserData(username, "lastimg", imagepath);
     }
 }
-
 
 function stopChat() {
     makeRequestToLocal({ "function": "stopChat", "arguments": "{}" });
