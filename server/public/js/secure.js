@@ -6,21 +6,39 @@ document.addEventListener("DOMContentLoaded", () => {
     const socket = new socketMode();
 
     const checkbox = document.getElementById("modeSelector");
-    mode = socketCheckbox ? socket : p2p;
+    mode = socketCheckbox ? p2p : socket;
     checkbox.addEventListener("change", function () {
         socketCheckbox = checkbox.checked == true;
-        mode = socketCheckbox ? socket : p2p;
+        mode = socketCheckbox ? p2p : socket;
         resetTable();
         mode.listAllPeers();
+        if (socketCheckbox) {
+            socket.disconnect();
+            p2p.connect();
+        }
+        else {
+            socket.connect();
+            p2p.disconnect();
+        }
     });
 
+    mode.connect();
     table = document.getElementById("peerTable");
     tablebegin = table.innerHTML
     mode.listAllPeers();
     intervall = setInterval(() => {
         mode.listAllPeers();
     }, 1000);
+    document.getElementById("messageInput").onchange = function () {
+        if (this.value.length > 0) {
+            mode.typing(true);
+        }
+        else {
+            mode.typing(false);
+        }
+    };
 });
+
 
 function handleKeyDown(keyevent) {
     if (keyevent.key === "Enter") {
@@ -94,14 +112,14 @@ function setChatInputs(show) {
     //show
     const userInput = document.getElementById("userInput");
     userInput.style.display = !show ? "none" : "block";
+    const showElement = document.getElementById("show");
+    showElement.style.display = !show ? "none" : "block";
 
     //hide
     const title = document.getElementById("title");
     title.style.display = show ? "none" : "block";
-    const table = document.getElementById("peerTable");
-    table.style.display = show ? "none" : "block";
-    const modeSelector = document.getElementById("modeSelector");
-    modeSelector.style.display = show ? "none" : "block";
+    const hide = document.getElementById("hide");
+    hide.style.display = show ? "none" : "block";
 }
 
 function formatInput(input) {
@@ -121,6 +139,11 @@ function sendButtonClicked() {
     mode.sendMessage();
 }
 
+function showTyping(show) {
+    const typing = document.getElementById("typing");
+    typing.style.display = !show ? "none" : "block";
+}
+
 class p2pMode {
 
     constructor() {
@@ -130,14 +153,18 @@ class p2pMode {
         this.initializer = false;
         this.connected = false;
         this.connectedToHost = false;
+        this.connect();
 
-        if (debug == "true") {
+        this.setEvents();
+    }
+
+    connect() {
+        if (window.debug == "true") {
             this.peer = new Peer(this.id, {
                 host: "/",
                 port: 3000,
                 path: "/p2pserver",
                 secure: false,
-                //debug: 3
             });
         }
         else {
@@ -148,7 +175,10 @@ class p2pMode {
                 secure: true,
             });
         }
-        this.setEvents();
+    }
+
+    disconnect() {
+        this.peer.disconnect();
     }
 
     generateId(length) {
@@ -237,27 +267,95 @@ class p2pMode {
         });
 
     }
+
+    typing(typing) {}
 }
 
 class socketMode {
 
     constructor() {
-        this.socket = io();
-        this.test();
-    }
-
-    test() {
-        this.socket.emit('chat message', "Hello World");
+        this.socket = io("/secure");
+        this.socket.disconnect();
+        this.room = ""
 
         this.socket.on('chat message', function (msg) {
             console.log(msg);
             addMessageToChat(msg, false);
         });
+
+        this.socket.on('comm join', function (data) {
+            console.log(data); 
+            console.log(data.user + " "+ data.id);  
+            console.log(username)
+            if (data.user != username) {
+                if (!confirm("Do you want to connect to " + data.user + "?")) {
+                    this.socket.emit('comm join', false);
+                    return;
+                }
+            }
+            this.room = data.id;
+            console.log("Joined " + data.id);
+            setChatInputs(true);
+            this.socket.emit('comm accept', true);
+        }.bind(this));
+
+        this.socket.on('comm typing', function (typing) {
+            showTyping(typing);
+        });
     }
 
-    sendMessage() { }
-    join() { }
-    listAllPeers() { }
+    connect() {
+        this.socket.connect();
+    }
+
+    disconnect() {
+        this.socket.disconnect();
+        this.room = "";
+        setChatInputs(false);
+    }
+
+    sendMessage() {
+        if (this.room == "") {
+            alert("You are not connected to a peer");
+            return;
+        }
+        const message = document.getElementById("messageInput");
+        var data = { message: message.value, id: this.room }
+        this.socket.emit('chat message', data);
+        addMessageToChat(message.value, true);
+        message.value = "";
+    }
+
+    typing(typing) {
+        this.socket.emit('comm typing', typing);
+    }
+
+    join(user) {
+        this.socket.emit('comm join', user);
+    }
+
+    listAllPeers() {
+        fetch("/getSockets", {
+            method: 'GET'
+        })
+            .then(response => response.json())
+            .then(data => {
+                var table = resetTable();
+                data.forEach(user => {
+                    var peerusername = user;
+                    if (peerusername == username) {
+                        return;
+                    }
+
+                    const button = makeRow(peerusername, table)
+
+                    button.onclick = function () {
+                        mode.join(user);
+                    }
+
+                })
+            });
+    }
 
 
 }

@@ -330,10 +330,10 @@ ongoing = false;
 currentRawMessage = "";
 
 function botMessage(bit) {
+    var isScrolledToBottom = getScrolledToBottom();
     if (ongoing) {
-        var isScrolledToBottom = getScrolledToBottom();
         currentRawMessage += bit;
-        animateText(currentRawMessage, currentMessage); // Use animateText to display message
+        animateText(currentRawMessage, currentMessage);
 
         MathJax.typesetPromise([currentMessage]).catch(function (err) {
             console.error('MathJax typesetPromise failed:', err);
@@ -345,13 +345,12 @@ function botMessage(bit) {
         updateScroll(isScrolledToBottom);
     }
     else {
-        var isScrolledToBottom = getScrolledToBottom();
         ongoing = true;
         array = makeNewMessage("", "bot");
         currentMessage = array[0];
         currentDIV = array[1];
         console.log(currentMessage);
-        animateText(bit, currentMessage); // Start animation for the new message
+        animateText(bit, currentMessage);
 
         currentDIV.appendChild(currentMessage);
         updateScroll(isScrolledToBottom);

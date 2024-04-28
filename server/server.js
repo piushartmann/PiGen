@@ -635,7 +635,7 @@ app.post('/chat-setModel', async (req, res) => {
 
 app.get('/chat-getModel', async (req, res) => {
     if (await db.checkUser(req.session.user)) {
-        res.send({ model: await db.getSetting("model")});
+        res.send({ model: await db.getSetting("model") });
     }
 });
 
@@ -680,6 +680,17 @@ app.post('/init', async (req, res) => {
         res.status(401).send("Unauthorized");
     }
 });
+
+
+app.get('/getSockets', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        res.send(Object.keys(Socketclients));
+    }
+    else {
+        res.send("Unauthorized");
+    }
+});
+
 
 app.get('/healthCheck', async (req, res) => {
     res.status(200).send("OK");
@@ -744,6 +755,7 @@ app.use(peerServer);
 const { Server } = require("socket.io");
 const io = new Server(server);
 const backEndIO = io.of('/backend');
+const secure = io.of('/secure');
 
 
 server.listen(3000, () => {
@@ -754,21 +766,67 @@ keepAlive = setInterval(() => {
     db.checkConnection();
 }, 10000);
 
-io.on('connection', (socket) => {
-    const cookies = socket.handshake.headers.cookie;
+function generateID(length) {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = ""
+    const charactersLength = characters.length;
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    }
+    return result
+}
 
-    console.log('a user connected');
-    socket.emit('chat message', "Hello World");
+var Socketclients = {};
+secure.on('connection', (socket) => {
+    const cookies = socket.handshake.headers.cookie;
+    if (!cookies) {
+        return;
+    }
+    base64 = cookies.split(';')[0].split('=')[1];
+    const session = JSON.parse(Buffer.from(base64, 'base64').toString('utf-8'));
+    const username = session.user.username;
+
+    console.log(username + ' connected');
+
+    Socketclients[username] = socket;
+
     socket.on('disconnect', () => {
-        console.log('user disconnected');
+        console.log(username + " disconnected");
+        delete Socketclients[username];
     });
 
-    socket.on('chat message', (msg) => {
-        console.log('message: ' + msg);
-        socket.emit('chat message', "Hello World");
+    socket.on('chat message', (data) => {
+        msg = data.message;
+        room = data.id;
+        socket.to(room).emit('chat message', msg);
+        console.log('message: ' + msg + " to " + room);
+    });
+
+    socket.on('comm join', (user) => {
+        if (user in Socketclients) {
+            console.log("Comm join request from " + username + " to " + user);
+            id = generateID(8);
+            Socketclients[user].emit('comm join', {id: id, user: username});
+
+            Socketclients[user].on('comm accept', function (accept) {
+                console.log(accept)
+                if (accept) {
+                    Socketclients[user].join(id);
+                    socket.join(id);
+                    socket.emit('comm join', {id: id, user: username});
+                }
+            }.bind(this));
+        }
+    });
+
+    socket.on('comm typing', (typing) => {
+        console.log("Typing: " + typing);
+        rooms = Array.from(socket.rooms);
+        socket.to(rooms[1]).emit('comm typing', typing);
     });
 });
 
+//TODO: verify token
 backEndIO.on('connection', (socket) => {
     console.log("Backend connected");
     global.backendConnected = true;
