@@ -1,12 +1,4 @@
-window.mathjax_loaded = false
 window.MathJax = {
-    startup: {
-        pageReady: () => {
-            console.log('Running MathJax');
-            window.mathjax_loaded = true
-            return MathJax.startup.defaultPageReady();
-        }
-    },
     tex: {
         inlineMath: [['$', '$'], ['\\(', '\\)']]
     },
@@ -18,9 +10,6 @@ window.MathJax = {
 global = {};
 global.messages = 0;
 global.generating = false;
-let currentAnimationPromise = null;
-let currentAnimationIndex = 0;
-let currentBitSize = 1;
 
 function sendButtonClicked() {
     if (!global.generating) {
@@ -78,7 +67,6 @@ function loadConversation() {
                 isBot = message.role == "assistant"
                 if (isBot) {
                     array = makeNewMessage(message.content, "bot");
-                    array[0].innerHTML = marked.parse(message.content);
                 }
                 else {
                     array = makeNewMessage(message.content, "user");
@@ -126,7 +114,12 @@ function makeNewMessage(message, user) {
     newDIV.className = isBot ? "botMessage" : "userMessage";
     newImage.className = isBot ? "botImage" : "userImage";
 
-    newMessage.textContent = message;
+    if (isBot) {
+        newMessage.innerHTML = marked.parse(message);
+    }
+    else {
+        newMessage.textContent = message;
+    }
 
     newImage.onclick = function () {
         const message = newImage.parentElement;
@@ -328,9 +321,10 @@ ongoing = false;
 currentRawMessage = "";
 
 function botMessage(bit) {
-    var isScrolledToBottom = getScrolledToBottom();
     if (ongoing) {
+        var isScrolledToBottom = getScrolledToBottom();
         currentRawMessage += bit;
+        //currentMessage.innerHTML = DOMPurify.sanitize(marked.parse(currentRawMessage));
         currentMessage.innerHTML = marked.parse(currentRawMessage);
 
         MathJax.typesetPromise([currentMessage]).catch(function (err) {
@@ -343,12 +337,15 @@ function botMessage(bit) {
         updateScroll(isScrolledToBottom);
     }
     else {
+        var isScrolledToBottom = getScrolledToBottom();
         ongoing = true;
         array = makeNewMessage("", "bot");
         currentMessage = array[0];
         currentDIV = array[1];
-        console.log(currentMessage);
-        currentRawMessage += bit;
+        console.log(currentMessage)
+        currentRawMessage = bit;
+        //currentMessage.innerHTML = DOMPurify.sanitize(marked.parse(currentRawMessage));
+        currentMessage.innerHTML = marked.parse(currentRawMessage);
         currentDIV.appendChild(currentMessage);
         updateScroll(isScrolledToBottom);
     }
@@ -431,36 +428,26 @@ function updateLanLabel(lan) {
 
 document.addEventListener('DOMContentLoaded', (event) => {
 
-    function load() {
-        if (window.mathjax_loaded == false) {
-            setTimeout(load, 1);
-            return;
+    hljs.highlightAll();
+
+
+    addElementsToNewCodeBlocks();
+    updateCodeSyntaxHighlighting();
+
+    loadConversation();
+
+    const eventSource = new EventSource('/chat-events');
+
+    eventSource.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        if (data.end) {
+            generationStop();
         }
-        speedTest();
+        else {
+            botMessage(data.msg);
+        }
+    };
 
-        hljs.highlightAll();
-
-
-        addElementsToNewCodeBlocks();
-        updateCodeSyntaxHighlighting();
-
-        loadConversation();
-
-        const eventSource = new EventSource('/chat-events');
-
-        eventSource.onmessage = function (event) {
-            const data = JSON.parse(event.data);
-            currentBitSize = data.bitsize;
-            if (data.end) {
-                botMessage(data.msg);
-                generationStop();
-            }
-            else {
-                botMessage(data.msg);
-            }
-        };
-    }
-    load();
 
 });
 
@@ -491,58 +478,4 @@ function updateCodeSyntaxHighlighting() {
             hljs.highlightElement(block);
         }
     });
-}
-
-function speedTest() {
-    time1 = Date.now();
-    fetch('/speedtest', {
-        method: 'GET'
-    })
-        .then(data => {
-            time2 = Date.now();
-            speed = time2 - time1;
-            console.log('Time:', speed + 'ms');
-            window.speed = speed;
-        })
-        .catch(error => {
-            console.error('Speed-test error:', error);
-        });
-}
-
-async function animateText(text, element, currentRawMessage) {
-    if (currentAnimationPromise) {
-        clearTimeout(currentAnimationPromise.timeoutId);
-        currentAnimationPromise.resolve();
-    }
-
-    let currentCharacter = currentRawMessage;
-
-    let promise = new Promise(resolve => {
-        let interval = window.speed / text.length;
-        const addCharacter = () => {
-            currentCharacter += text.charAt(currentAnimationIndex);
-            currentAnimationIndex++;
-            if (currentAnimationIndex < text.length) {
-                currentAnimationPromise.timeoutId = setTimeout(addCharacter, interval);
-            } else {
-                // Add the remaining characters
-                currentCharacter += text.slice(currentAnimationIndex);
-                resolve();
-            }
-        };
-        currentAnimationPromise = { timeoutId: setTimeout(addCharacter, interval), resolve };
-    });
-
-    await promise;
-
-    if (currentBitSize > 2) {
-        element.innerHTML = marked.parse(currentCharacter);
-
-        MathJax.typesetPromise([currentMessage]).catch(function (err) {
-            console.error('MathJax typesetPromise failed:', err);
-        });
-
-        addElementsToNewCodeBlocks();
-        updateCodeSyntaxHighlighting();
-    }
 }
