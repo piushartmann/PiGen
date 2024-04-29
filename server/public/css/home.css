@@ -6,7 +6,7 @@
     --text-color: black;
     --box-shadow-color: #888888;
 
-    --num-tiles: 4;
+    --num-tiles: 1; /*set automaticly*/
     --size-tiles: 400px;
 }
 

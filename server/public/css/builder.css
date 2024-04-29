@@ -1,0 +1,55 @@
+.area {
+    width: 50%;
+    height: 100%;
+    position: absolute;
+    z-index: 1;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+#chatArea{
+    left: 0;
+    background-color: blue
+}
+
+#previewArea{
+    right: 0;
+    background-color: red
+}
+
+#resizer {
+    height: 100%;
+    width: 5px;
+    position: absolute;
+    background-color: #000;
+    cursor: ew-resize;
+    z-index: 1000;
+    left: 50%;
+}
+
+@media (max-width: 800px) {
+    .area {
+        width: 100%;
+        height: 50%;
+    }
+
+    #chatArea {
+        bottom: 0;
+    }
+
+    #previewArea {
+        top: 0;
+    }
+
+    #resizer {
+        width: 100%;
+        height: 5px;
+        left: 0;
+        top: 50%;
+        cursor: ns-resize;
+    }
+}

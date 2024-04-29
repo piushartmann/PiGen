@@ -285,6 +285,15 @@ app.get('/getUserName', async (req, res) => {
     }
 });
 
+app.get('/builder', async (req, res) => {
+    if (await db.checkUser(req.session.user)) {
+        res.render("builder.ejs", { username: req.session.user.username });
+    }
+    else {
+        res.redirect('/');
+    }
+});
+
 
 app.get('/chat', async (req, res) => {
     if (await db.checkUser(req.session.user)) {
@@ -796,7 +805,7 @@ server.listen(3000, () => {
 });
 
 keepAlive = setInterval(() => {
-    db.checkConnection();
+    fetch('https://google.com')
 }, 10000);
 
 function generateID(length) {

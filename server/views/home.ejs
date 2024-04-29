@@ -44,9 +44,6 @@
 
 <script>
   username = "<%= username %>"
-  document.addEventListener('DOMContentLoaded', (event) => {
-    setAdmin(<%= admin %>);
-
+  setAdmin("<%= admin %>");
   document.body.style.setProperty('--num-tiles', document.getElementById("grid-container").children.length);
-});
 </script>
