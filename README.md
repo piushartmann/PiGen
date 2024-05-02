@@ -26,3 +26,4 @@ Live Website [here](https://superladens.onrender.com/)
 
 5. **Backend**
     1. Convert Current Ai Engine to tool usage
+    2. Add Push Notifications
