@@ -6,17 +6,24 @@ Live Website [here](https://superladens.onrender.com/)
 
 ## ToDo
 
-1. **Backend**
-    1. Websocket connection to Local
-
-2. **SecureChat**
+1. **SecureChat**
     1. Markdown Support
     2. Media support
     3. Alternative: Websocket Connections
 
-3. **AI Chat**
+2. **AI Chat**
     1. Giphy Support
     2. Web support
+    3. WebSockets
+    4. Integrate Tools
 
-4. **SD**
+3. **SD**
     1. Better UI
+  
+4. **Builder**
+    1. Like... make it
+    2. tool ai
+
+5. **Backend**
+    1. Convert Current Ai Engine to tool usage
+    2. Add Push Notifications
