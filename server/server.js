@@ -329,7 +329,7 @@ app.post('/chat-msg', async (req, res) => {
 
             console.log(ChatHistory);
 
-            makeRequestToLocal({ "function": "chatMsg", "arguments": { msg: ChatHistory, username: req.session.user.username } });
+            makeRequestToLocal({ "function": "chatMsg", "arguments": { msg: req.body.msg, username: req.session.user.username } });
 
             console.log("Chat msg requested");
             res.status(200);

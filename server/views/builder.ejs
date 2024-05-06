@@ -5,17 +5,42 @@
     <title>Website Builder</title>
     <script type="text/javascript" src="/js/builder.js"></script>
     <link rel="stylesheet" href="css/builder.css">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <link rel="stylesheet" href="css/chat.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+    <script type="text/javascript" id="MathJax-script" async
+        src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js">
+        </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js/styles/github-dark.min.css">
 
 </head>
+
 <body>
     <div id="container" style="width: 100%; height: 100%; position: absolute;">
         <div class="area" id="chatArea">
-            
+            <div class="chat-window" id="chatWindow">
+
+            </div>
+            <div class="userInput">
+                <input class="messageInput" type="text" id="messageInput" placeholder="Type your message..."
+                    onkeydown="handleKeyDown(event)" autofocus>
+
+                <button id="sendButton" class="sendButton" onclick="sendButtonClicked()">
+                    <img src="/icons/paper-plane-solid.svg" alt="Icon">
+                </button>
+                <button id="deleteHistory" class="deleteHistory" onclick="deleteHistory()">
+                    <img src="/icons/delete-button.svg" alt="Icon"
+                        style="width: 100%; filter: invert(0.5) sepia(1) saturate(100) hue-rotate(0deg);">
+                </button>
+            </div>
         </div>
         <div id="resizer"></div>
         <div class="area" id="previewArea">
-            
+
         </div>
     </div>
 </body>

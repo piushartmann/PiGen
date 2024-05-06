@@ -1,3 +1,4 @@
+from pydantic import confrozenset
 import requests
 import json
 import time
@@ -10,6 +11,7 @@ import signal
 
 import stableAPI as sd
 import ollamaAPI
+import toolLLM
 from mongoConnector import MongoDB
 
 
@@ -26,7 +28,10 @@ else:
 
 compute_token = os.environ["COMPUTE_TOKEN"]
 
-lla = ollamaAPI.API(url, compute_token)
+lla = ollamaAPI.API()
+lla = toolLLM.API()
+lla.url = url
+lla.compute_token = compute_token
 
 stop = False
 class serverFunctions:
@@ -49,6 +54,7 @@ class serverFunctions:
     
 
     def chatMsg(msg, username):
+       
         sd.unloadModel()
         lla.setModel(db.get_setting("model"))
         lla.chat(msg, username)

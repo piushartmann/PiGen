@@ -95,3 +95,8 @@ class MongoDB:
             user_data = next((data for data in user["userData"] if data["key"] == key), None)
             return user_data["value"] if user_data else None
         return None
+    
+    
+if __name__ == "__main__":
+    db = MongoDB()
+    print(db.get_user_data("admin", "history"))

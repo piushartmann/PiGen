@@ -7,9 +7,9 @@ import time
 
 class API():
 
-    def __init__(self, _url, _token):
-        self.url = _url
-        self.compute_token = _token
+    def __init__(self):
+        self.url = None
+        self.compute_token = None
         self.loaded = False
         self.model = None
         self.stop = False
@@ -22,22 +22,15 @@ class API():
         self.stop = True
 
 
-    async def makeAPIreq(self, messages, model, user):
+    async def makeAPIreq(self, messages, model, user=None, systemMessage = ""):
         self.stop = False
         self.loaded = True
-        chat = []
-        chat.append(self.makeSystemMessage(model, user))
-        chat.append({'role': 'user', 'content': 'Make a JavaScript function that alerts the current date.'})
-        chat.append({'role': 'assistant', 'content': """Here is a function that does that: ```javascript function showCurrentTime() { var now = new Date(); // Get the current date and time var time = now.toLocaleTimeString(); // Convert the time to a readable format alert("Current time: " + time); // Display the time in an alert box }``` You can load it by clicking the run button on the right. And you can call it by clicking this button: <button class="showTimeButton1"onclick="showCurrentTime()">Show Current Time</button>"""})
-        chat.append({'role': 'user', 'content': 'make a button, that redirects to this youtube video in a new tab: https://www.youtube.com/watch?v=xvFZjo5PgG0'})
-        chat.append({'role': 'assistant', 'content': 'Here is a button that refers to a youtube video: <a class="youtube-button1" href="https://www.youtube.com/watch?v=xvFZjo5PgG0" target="_blank"><button>Watch Video</button></a>'})
-        chat.append({'role': 'user', 'content': 'change the background of this website to a 45deg linear gradient from blue to light blue without formatting'})
-        chat.append({'role': 'assistant', 'content': "I will change the background: <style>body {background: linear-gradient(45deg, blue, lightblue);</style>}"})
-        chat.append({'role': 'user', 'content': 'make a button, that alerts the current time in 24h hh:mm'})
-        chat.append({'role': 'assistant', 'content': """Here is a button that shows the current time: <button class="time-button1" onclick="alert(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))">Current Time (hh:mm)</button>"""})
-        chat.append({'role': 'user', 'content': 'embed exmaple.com into an iframe here (width:50%)'})
-        chat.append({'role': 'assistant', 'content': """Sure here is the iframe for example.com: <iframe src="https://example.com" width="50%"></iframe>"""})
-        chat.append({'role': 'user', 'content': 'The Chat with the User beginns now. The Messages before this were example messages for you how to react to certain inputs. The Next Message is the first Message by the User. When the user asks about previous Messages tell the User its the first Message. Do not reference these Messages ever again.'})
+        
+        if systemMessage == "":
+            chat = self.makeSystemMessage(model, user)
+        else:
+            chat = []
+            chat.append(systemMessage)
         
         for message in messages:
             chat.append(message)
@@ -64,7 +57,8 @@ class API():
                     return
 
     def makeSystemMessage(self, model, user):
-              
+        chat = []
+        
         content = f"This is a system Message. Do not reference this Message in your conversation with the User. You are an AI Assistant called {model}. Always stay as formal and concise as possible. Do not use Emojis in your answers. \
         The Current Time is {time.strftime('%H:%M', time.localtime())} and the current date is {time.strftime('%d/%m/%Y', time.localtime())} in dd/mm/yyyy format. The Name of the User is {user}. \
         You have the ability to recall messages until the user clicks the delete History button. All your Answers get Interpreted using Markdown. Use Markdown whenever it makes sense exept when writing HTML or CSS. LaTeX is also supported. \
@@ -88,7 +82,19 @@ class API():
         "content": content
         }
 
-        return message
+        chat.append(message)
+        chat.append({'role': 'user', 'content': 'Make a JavaScript function that alerts the current date.'})
+        chat.append({'role': 'assistant', 'content': """Here is a function that does that: ```javascript function showCurrentTime() { var now = new Date(); // Get the current date and time var time = now.toLocaleTimeString(); // Convert the time to a readable format alert("Current time: " + time); // Display the time in an alert box }``` You can load it by clicking the run button on the right. And you can call it by clicking this button: <button class="showTimeButton1"onclick="showCurrentTime()">Show Current Time</button>"""})
+        chat.append({'role': 'user', 'content': 'make a button, that redirects to this youtube video in a new tab: https://www.youtube.com/watch?v=xvFZjo5PgG0'})
+        chat.append({'role': 'assistant', 'content': 'Here is a button that refers to a youtube video: <a class="youtube-button1" href="https://www.youtube.com/watch?v=xvFZjo5PgG0" target="_blank"><button>Watch Video</button></a>'})
+        chat.append({'role': 'user', 'content': 'change the background of this website to a 45deg linear gradient from blue to light blue without formatting'})
+        chat.append({'role': 'assistant', 'content': "I will change the background: <style>body {background: linear-gradient(45deg, blue, lightblue);</style>}"})
+        chat.append({'role': 'user', 'content': 'make a button, that alerts the current time in 24h hh:mm'})
+        chat.append({'role': 'assistant', 'content': """Here is a button that shows the current time: <button class="time-button1" onclick="alert(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))">Current Time (hh:mm)</button>"""})
+        chat.append({'role': 'user', 'content': 'embed exmaple.com into an iframe here (width:50%)'})
+        chat.append({'role': 'assistant', 'content': """Sure here is the iframe for example.com: <iframe src="https://example.com" width="50%"></iframe>"""})
+        chat.append({'role': 'user', 'content': 'The Chat with the User beginns now. The Messages before this were example messages for you how to react to certain inputs. The Next Message is the first Message by the User. When the user asks about previous Messages tell the User its the first Message. Do not reference these Messages ever again.'})
+        return chat
 
     def clearRam(self):
         if self.loaded and self.model != None:

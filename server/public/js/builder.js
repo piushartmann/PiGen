@@ -1,6 +1,16 @@
 var horizontal = window.innerWidth > 800;
 var resizerPercentage = 0.5;
 
+function dynamicallyLoadScript(url) {
+    var script = document.createElement("script");
+    script.src = url;
+   
+    document.head.appendChild(script);
+}
+
+dynamicallyLoadScript("js/chat.js");
+
+
 document.addEventListener("DOMContentLoaded", function () {
     const resizer = document.getElementById("resizer");
     const chatArea = document.getElementById("chatArea");
@@ -33,6 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
             horizontal = true;
             resizer.style.top = "0px";
             resizer.style.left = "50%";
+
             console.log("Horizontal resizing");
         }
         else {

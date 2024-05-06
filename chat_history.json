@@ -1,0 +1,42 @@
+[
+    {
+        "role": "user",
+        "content": "What are the natural enemies of the lion?",
+        "name": null,
+        "tool_call_id": null,
+        "tool_call_name": null,
+        "tool_calls": null,
+        "metrics": {},
+        "function_call": null
+    },
+    {
+        "role": "assistant",
+        "content": "- Running: search_wikipedia(query=natural enemies of lions)\n\nThe natural enemies of lions are primarily other large predators, such as hyenas and packs of wild dogs. They also face threats from humans who hunt them for sport or kill them to protect livestock. The lion is a social species, forming groups called prides, which can help deter potential predators.",
+        "name": null,
+        "tool_call_id": null,
+        "tool_call_name": null,
+        "tool_calls": null,
+        "metrics": {},
+        "function_call": null
+    },
+    {
+        "role": "user",
+        "content": "And what do they eat?",
+        "name": null,
+        "tool_call_id": null,
+        "tool_call_name": null,
+        "tool_calls": null,
+        "metrics": {},
+        "function_call": null
+    },
+    {
+        "role": "assistant",
+        "content": "{\n    \"name\": \"search_wikipedia\",\n    \"arguments\": {\n        \"query\": \"what do lions eat\"\n    }\n}",
+        "name": null,
+        "tool_call_id": null,
+        "tool_call_name": null,
+        "tool_calls": null,
+        "metrics": {},
+        "function_call": null
+    }
+]
