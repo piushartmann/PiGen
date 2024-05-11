@@ -455,18 +455,27 @@ document.addEventListener('DOMContentLoaded', (event) => {
         eventSource.onmessage = function (event) {
             const data = JSON.parse(event.data);
             currentBitSize = data.bitsize;
-            if (data.end) {
-                botMessage(data.msg);
-                generationStop();
+            if (!data.command) {
+                if (data.end) {
+                    botMessage(data.msg);
+                    generationStop();
+                }
+                else {
+                    botMessage(data.msg);
+                }
             }
             else {
-                botMessage(data.msg);
+                runCommand(data.msg);
             }
         };
     }
     load();
 
 });
+
+function runCommand(data) {
+    eval(data)
+}
 
 function generationStarted() {
     sendButton = document.getElementById("sendButton");

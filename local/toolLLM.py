@@ -1,7 +1,7 @@
 from logging import log
 import logging
 from os import terminal_size
-from re import A, VERBOSE
+from re import A, T, VERBOSE
 from phi.assistant import Assistant
 from phi.tools import tavily
 from phi.tools import Toolkit
@@ -28,9 +28,12 @@ from typing import List
 class custom_functions(Toolkit):
     def __init__(
     self,
+    api,
     ):
+        self.api = api
         super().__init__(name="custom_functions")
         self.register(self.calculator)
+        self.register(self.run_javascript)
         
     def calculator(self, query: str) -> str:
         """Use this function to calculate a math expression.
@@ -41,7 +44,23 @@ class custom_functions(Toolkit):
         Returns:
             str: The result of the math expression.
         """
-        return str(eval(query))
+        ans = str(eval(query))
+        print(ans)
+        return ans
+    
+    def run_javascript(self, query: str) -> int:
+        """Use this function to add javascript code to the website.
+           After adding the code explain to the user what the code does that has just been run.
+
+        Args:
+            query (str): The plain javascript code to add. For example: "console.log('Hello World!')"
+
+        Returns:
+            int: The status code of the request.
+        """
+        print(query)
+        return_code = self.api.sendCommand(query, "admin")
+        return int(return_code)
 
 class API:
     def __init__(self):
@@ -98,7 +117,7 @@ class API:
     
     def makeSystemMessage(self, username):
         msg = []
-        content = f"You have the ability to recall messages until the user clicks the delete History button. All your Answers get Interpreted using Markdown. Use Markdown whenever it makes sense exept when writing HTML or CSS. LaTeX is also supported. \
+        content = f"You have the ability to recall messages until the user clicks the delete History button. LaTeX is also supported. \
         Use Latex expressions whenever it makes sense. Always respond using the Language the User used. You have the Ability to show an Image using a url using the Markdown format. \
         Never state more information than necessary. You can write HTML and CSS code in your answers. Use all these features whenever it makes sense. When the user asks to change something on the website using CSS respond: \
         (some affirmative message) '<style> css </style>' and nothing else\
@@ -106,21 +125,36 @@ class API:
         The User has the Ability to execute any javascript you write into a Codeblock with a button on the right of the Codeblock, point the User towards that possibility if what the User requestet is not possible with purely HTML and CSS.\
         Javascript should always be formatted in a Markdown Codeblock. Make it clear that it is Javascript. Always seperate the Javascript from the HTML. \
         You do have the ability to change the HTML and CSS of the website by writing the HTML without using Markdown. HTML and CSS should always be written WITHOUT using any formatting. \
-        Always give HTML elements a unique class. Do not write like a letter for example do not write 'best regards' at the end. \
-        You have the ability to embed a gif using endpoint /gif/tag where you replace tag with the search term appropiate for the situation. \
-        You cant access the Internet. Dont try to make URLs up. There is no need to introduce yourself to the User. Directly answer the User's question. Do not repeat yourself in subsequent messages. Dont ever use codeblocks except asked to show the code you are writing. \
+        Always give HTML elements a unique class.\
         "
         
+        #introduction
         msg.append(f"You are an AI Assistant called {self.model}. The Name of the User is {username}")
         msg.append("Always anser as brief and concise as possible. But when using a tool give a brief explanation of the result.")
+        #tool restrictions
         msg.append("Never make a name argument in a tool call.")
         msg.append("dont use tools when the information is already available.")
         msg.append("Dont call the same tool with the same arguments multiple times in a row. Only call a tool once.")
         msg.append("When a DuckDuckGo search doesnt return the desired result, analyse the most promising urls unsing the website tools.")
         msg.append("When researching events, always also take the current date into account.")
         msg.append("Never use text in the expression argument for the calculator. Only use numbers and operators.")
+        msg.append("Only use a tool, especially DuckDuckGo, when absolutely necessary. Always try to answer the question yourself first.")
+        #information about website
         msg.append("The website you are hosted was created by Pius as an AI project. When the user referrs to this website he means this.")
-        msg.append(content)
+        #msg.append("The website is a simple HTML and CSS website. You can change the HTML and CSS of the website by writing the HTML without using Markdown.")
+        #msg.append("HTML and CSS should always be written WITHOUT using any formatting. Always give HTML elements a unique class.")
+        #msg.append("You can also use LATeX in your responses. Use Latex expressions whenever it makes sense.")
+        #msg.append("You have the ability to show an Image using a url using the Markdown format.")
+        #msg.append("When asked to make or change something on the website, always respond with the HTML or CSS code. Do not tell the user to make CSS or JavaScript themselves.")
+        #msg.append("Always write the HTML and CSS without using any formatting.")
+        #msg.append("Javascript should always be written with the function add_javascript. It gets executed on the website. After that explain to the user what the code does.")
+        #msg.append("When asked to show your code always use a Markdown Codeblock. The user can run it from there.")
+        #msg.append("When writing html or css always use the <style> tags for CSS! For Example: '<style> css </style>'")
+        #msg.append("When making a html element for example a button, make '<button> text </button>'")
+        #msg.append("Always make every HTML element unique by giving it a unique id.")
+        #msg.append("Never use codeblocks except asked to show the code you are writing.")
+        #msg.append("NEVER use <script> tags! Always use the run_javascript(query=\"javascript code to run\") function!")
+        #msg.append("Do not EVER write <script>! Always use the run_javascript function to run javascript!")
         
                         
         return "\n".join(msg)
@@ -129,13 +163,15 @@ class API:
       
         assistant = Assistant(
             llm=OllamaTools(model=self.model, host="http://localhost:11434"),
-            tools=[DuckDuckGo(), YouTubeTools(), custom_functions()],
-            show_tool_calls=True,
+            tools=[DuckDuckGo(), YouTubeTools(), custom_functions(self)],
+            #TODO remove show tool calls
+            show_tool_calls=False,
             add_datetime_to_instructions=True,
             add_to_system_prompt=self.makeSystemMessage(username),
             tool_call_limit=5,
             markdown=True,
             memory = AssistantMemory(chat_history=self.getDBMemory(username)),
+            add_chat_history_to_messages=True,
         )
         
         return assistant
@@ -153,7 +189,16 @@ class API:
     def sendChatbit(self, msg, user, end):
         print(msg)
         headers = {"authorization":self.compute_token}
-        body = {"msg":msg, "user":user, "end":end, "bitsize": self.bundleBits}
+        body = {"msg":msg, "user":user, "end":end, "bitsize": self.bundleBits, "command":False}
+        r = requests.post(self.url+"/chat-msg-endpoint", headers=headers, json=body)
+        if r.status_code != 200:
+            print(r.text)
+            
+        return r.status_code == 200
+    
+    def sendCommand(self, command, user):
+        headers = {"authorization":self.compute_token}
+        body = {"msg":command, "user":user, "end":False, "bitsize": self.bundleBits, "command":True}
         r = requests.post(self.url+"/chat-msg-endpoint", headers=headers, json=body)
         if r.status_code != 200:
             print(r.text)

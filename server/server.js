@@ -319,15 +319,15 @@ app.post('/chat-msg', async (req, res) => {
                 "content": req.body.msg
             }
 
-            ChatHistory = await db.getUserData(req.session.user.username, "history");
-            if (ChatHistory == null) {
-                ChatHistory = [];
-            }
-            ChatHistory.push(msg);
+            //ChatHistory = await db.getUserData(req.session.user.username, "history");
+            //if (ChatHistory == null) {
+            //    ChatHistory = [];
+            //}
+            //ChatHistory.push(msg);
+//
+            //await db.setUserData(req.session.user.username, "history", ChatHistory);
 
-            await db.setUserData(req.session.user.username, "history", ChatHistory);
-
-            console.log(ChatHistory);
+            //console.log(ChatHistory);
 
             makeRequestToLocal({ "function": "chatMsg", "arguments": { msg: req.body.msg, username: req.session.user.username } });
 
@@ -513,8 +513,9 @@ app.post('/chat-msg-endpoint', (req, res) => {
         end = req.body.end;
         user = req.body.user;
         bitsize = req.body.bitsize;
+        command = req.body.command;
         console.log(msg);
-        sendChatUpdateToClient(user, msg, end, bitsize);
+        sendChatUpdateToClient(user, msg, end, bitsize, command);
         res.status(200).send("Chat message sent");
     }
     else {
@@ -762,10 +763,10 @@ app.get('/gif/:tag', async (req, res) => {
 
 });
 
-function sendChatUpdateToClient(username, msg, end, bitsize) {
+function sendChatUpdateToClient(username, msg, end, bitsize, command) {
     const client = Chatclients.get(username);
     if (client) {
-        client.res.write(`data: ${JSON.stringify({ msg, end, bitsize })}\n\n`);
+        client.res.write(`data: ${JSON.stringify({ msg, end, bitsize, command })}\n\n`);
     }
 }
 
